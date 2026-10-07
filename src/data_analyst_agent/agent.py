@@ -7,21 +7,26 @@ from typing import Any, Protocol
 
 from data_analyst_agent.llm import LLMClient, Message, ToolDefinition
 from data_analyst_agent.prompts import SYSTEM_PROMPT
+from data_analyst_agent.tools import Chart, ToolResult
+
+# Tope duro de gráficas por respuesta. El prompt pide además una sola si no se pidió.
+MAX_CHARTS_PER_ANSWER = 3
 
 
 class ToolExecutor(Protocol):
     definitions: list[ToolDefinition]
 
-    def execute(self, name: str, arguments: dict[str, Any]) -> str: ...
+    def execute(self, name: str, arguments: dict[str, Any]) -> ToolResult: ...
 
 
 @dataclass
 class Step:
-    """Una llamada a herramienta: qué se pidió y qué devolvió."""
+    """Una llamada a herramienta: qué se pidió, qué devolvió y la gráfica si la hubo."""
 
     tool: str
     arguments: dict[str, Any]
     output: str
+    chart: Chart | None = None
 
 
 @dataclass
@@ -30,6 +35,10 @@ class AgentResult:
     steps: list[Step] = field(default_factory=list)
     iterations: int = 0
     hit_limit: bool = False
+
+    @property
+    def charts(self) -> list[Chart]:
+        return [step.chart for step in self.steps if step.chart is not None]
 
 
 class Agent:
@@ -41,10 +50,12 @@ class Agent:
         tools: ToolExecutor,
         max_iterations: int = 8,
         system_prompt: str = SYSTEM_PROMPT,
+        max_charts: int = MAX_CHARTS_PER_ANSWER,
     ) -> None:
         self.llm = llm
         self.tools = tools
         self.max_iterations = max_iterations
+        self.max_charts = max_charts
         self.messages: list[Message] = [Message(role="system", content=system_prompt)]
 
     def run(self, question: str) -> AgentResult:
@@ -61,9 +72,20 @@ class Agent:
                 return AgentResult(answer=answer, steps=steps, iterations=iteration)
 
             for call in response.tool_calls:
-                output = self._execute(call.name, call.arguments)
-                steps.append(Step(tool=call.name, arguments=call.arguments, output=output))
-                self.messages.append(Message(role="tool", content=output, tool_call_id=call.id))
+                result = self._execute(call.name, call.arguments)
+                if result.chart is not None and sum(s.chart is not None for s in steps) >= (
+                    self.max_charts
+                ):
+                    result = ToolResult(
+                        f"Error: ya hay {self.max_charts} gráficas en esta respuesta, que es el "
+                        "máximo. No crees más gráficas."
+                    )
+                steps.append(
+                    Step(call.name, call.arguments, output=result.text, chart=result.chart)
+                )
+                self.messages.append(
+                    Message(role="tool", content=result.text, tool_call_id=call.id)
+                )
 
         return AgentResult(
             answer=f"No llegué a una respuesta dentro del límite de {self.max_iterations} "
@@ -73,8 +95,8 @@ class Agent:
             hit_limit=True,
         )
 
-    def _execute(self, name: str, arguments: dict[str, Any]) -> str:
+    def _execute(self, name: str, arguments: dict[str, Any]) -> ToolResult:
         try:
             return self.tools.execute(name, arguments)
         except Exception as exc:  # noqa: BLE001 - un fallo de herramienta no debe detener el ciclo
-            return f"Error interno en la herramienta {name}: {exc}"
+            return ToolResult(f"Error interno en la herramienta {name}: {exc}")

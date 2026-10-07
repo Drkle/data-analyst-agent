@@ -4,6 +4,9 @@ from typing import Any
 
 from data_analyst_agent.agent import Agent
 from data_analyst_agent.llm import LLMResponse, Message, ToolCall, ToolDefinition
+from data_analyst_agent.tools import Chart, ToolResult
+
+CHART = Chart(figure_json="{}", kind="bar", x_label="x", y_label="y", title="t", points=3)
 
 
 class ScriptedLLM:
@@ -23,14 +26,16 @@ class FakeTools:
         self.definitions: list[ToolDefinition] = []
         self.fail = fail
 
-    def execute(self, name: str, arguments: dict[str, Any]) -> str:
+    def execute(self, name: str, arguments: dict[str, Any]) -> ToolResult:
         if self.fail:
             raise RuntimeError("se rompió")
-        return f"resultado de {name}"
+        if name == "create_chart":
+            return ToolResult("Gráfica creada", chart=CHART)
+        return ToolResult(f"resultado de {name}")
 
 
-def _tool_response(call_id: str = "c1") -> LLMResponse:
-    return LLMResponse(text="", tool_calls=[ToolCall(call_id, "run_python", {"code": "print(1)"})])
+def _tool_response(call_id: str = "c1", name: str = "run_python") -> LLMResponse:
+    return LLMResponse(text="", tool_calls=[ToolCall(call_id, name, {"code": "print(1)"})])
 
 
 def test_runs_tool_then_answers() -> None:
@@ -77,3 +82,22 @@ def test_tool_exception_is_reported_to_model() -> None:
 
     assert result.steps[0].output.startswith("Error interno en la herramienta run_python")
     assert result.answer == "ok"
+
+
+def test_chart_reaches_result_but_not_model() -> None:
+    llm = ScriptedLLM([_tool_response(name="create_chart"), LLMResponse(text="listo")])
+    result = Agent(llm, FakeTools()).run("grafica")
+
+    assert result.charts == [CHART]
+    assert llm.calls[1][-1].content == "Gráfica creada"
+
+
+def test_charts_beyond_limit_are_rejected() -> None:
+    llm = ScriptedLLM(
+        [_tool_response(f"c{i}", name="create_chart") for i in range(2)]
+        + [LLMResponse(text="listo")]
+    )
+    result = Agent(llm, FakeTools(), max_charts=1).run("grafica")
+
+    assert len(result.charts) == 1
+    assert "máximo" in result.steps[1].output

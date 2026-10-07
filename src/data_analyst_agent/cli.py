@@ -8,12 +8,15 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+import plotly.io as pio
+
 from data_analyst_agent.agent import Agent, AgentResult
 from data_analyst_agent.config import ConfigError, load_settings
 from data_analyst_agent.llm import LLMError, create_client
 from data_analyst_agent.tools import DataTools
 
 EXIT_WORDS = {"salir", "exit", "quit"}
+CODE_TOOLS = {"run_python", "create_chart"}
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -28,13 +31,14 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         settings = load_settings()
-    except ConfigError as exc:
-        print(f"Error de configuración: {exc}")
+        tools = DataTools(args.archivo, timeout=settings.sandbox_timeout)
+    except (ConfigError, ValueError) as exc:
+        print(f"Error: {exc}")
         return 1
 
-    tools = DataTools(args.archivo, timeout=settings.sandbox_timeout)
     agent = Agent(create_client(settings), tools, max_iterations=settings.max_iterations)
     print(f"Analizando {args.archivo.name} con {settings.provider} ({settings.model}).")
+    print(f"Carpeta de trabajo de esta sesión: {tools.workdir}")
     print("Escribe 'salir' para terminar.")
 
     while True:
@@ -52,16 +56,20 @@ def main(argv: list[str] | None = None) -> int:
         except LLMError as exc:
             print(f"Error al consultar el modelo: {exc}")
             continue
-        _print_result(result, verbose=args.verbose)
+        _print_result(result, verbose=args.verbose, charts_dir=tools.workdir / "charts")
 
 
-def _print_result(result: AgentResult, verbose: bool) -> None:
+def _print_result(result: AgentResult, verbose: bool, charts_dir: Path) -> None:
     for step in result.steps:
         print(f"\n[{step.tool}]")
-        if step.tool == "run_python":
+        if step.tool in CODE_TOOLS:
             print(step.arguments.get("code", ""))
         if verbose:
             print(f"--- salida ---\n{step.output}")
+    for index, chart in enumerate(result.charts, start=1):
+        path = charts_dir / f"grafica_{len(list(charts_dir.glob('*.html'))) + 1}.html"
+        pio.from_json(chart.figure_json).write_html(path, include_plotlyjs="cdn")
+        print(f"\nGráfica {index} ({chart.kind}, {chart.points} puntos): {path.resolve()}")
     print(f"\n{result.answer}")
     print(f"\n({result.iterations} iteraciones)")
 

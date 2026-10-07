@@ -71,7 +71,7 @@ streamlit run app/streamlit_app.py
 
 - [x] Fase 0 — Preparación
 - [x] Fase 1 — Núcleo del agente
-- [ ] Fase 2 — Gráficas e interfaz web
+- [x] Fase 2 — Gráficas e interfaz web
 - [ ] Fase 3 — Robustez y seguridad
 - [ ] Fase 4 — Evaluaciones
 - [ ] Fase 5 — Demo pública
@@ -119,6 +119,26 @@ Criterio de cierre — 5 preguntas con Groq (`openai/gpt-oss-120b`), 5/5 correct
 | ¿Qué región generó más ingresos? | Centro, 275 858,67 | Centro, 275 858,67 | 2 |
 | ¿En qué mes hubo más ingresos? | Febrero 2025, 132 836,23 | Febrero, 132 836,23 | 2 |
 | ¿Precio promedio de la categoría Muebles? | 164,76 | 164,76 | 2 |
+
+**Fase 2 — Gráficas e interfaz web (completada, 2026-10-07)**
+
+- `create_chart`: el modelo escribe código Plotly que asigna `fig`. El sandbox valida que sea
+  una figura de Plotly con datos y como máximo 5000 puntos; si no, devuelve un error claro.
+  Al modelo solo le llega un resumen (tipo, ejes, puntos, título), nunca la figura completa.
+- Reglas de gráficas: agregar los datos antes de graficar; graficar solo si se pide, o como
+  máximo una si no se pidió (prompt), con un tope de 3 por respuesta en el código. Las cifras
+  de la respuesta salen siempre de `run_python`.
+- Carpeta de trabajo por sesión (`sandbox_workspace/<id>/`). En la app se borra al cambiar o
+  quitar el archivo; el archivo subido se guarda ahí con un nombre fijo.
+- Límite de 50 MB en tres capas: `maxUploadSize` de Streamlit, comprobación en la app y en
+  `DataTools`.
+- App de Streamlit (`streamlit run app/streamlit_app.py`): subida de CSV/XLSX, vista previa,
+  chat con historial, gráficas interactivas y el código ejecutado en un desplegable.
+- La CLI guarda cada gráfica como `.html` en la carpeta de la sesión.
+- 38 tests (incluye validación de gráficas, carpetas de sesión y un test de humo de la app).
+
+Criterio de cierre: se subió `ventas.csv` a la app y, preguntando en español, se obtuvo la
+gráfica de ingresos diarios.
 
 ## Licencia
 
