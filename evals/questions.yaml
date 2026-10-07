@@ -1,0 +1,7 @@
+# Preguntas de evaluación con respuesta esperada. (Fase 4)
+# Ejemplo:
+# - id: q01
+#   dataset: data/sample/ventas.csv
+#   question: "¿Cuál fue el producto con más unidades vendidas?"
+#   expected: "..."
+#   check: exact   # exact | contains | numeric_tolerance

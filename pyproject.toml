@@ -1,0 +1,33 @@
+[project]
+name = "data-analyst-agent"
+version = "0.1.0"
+description = "Agente de IA que analiza datos tabulares ejecutando código de forma segura."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = [
+    "openai",          # cliente compatible con Groq y Gemini
+    "anthropic",       # opcional
+    "pandas",
+    "openpyxl",
+    "plotly",
+    "streamlit",
+    "python-dotenv",
+    "pyyaml",
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "pytest-cov", "ruff"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
