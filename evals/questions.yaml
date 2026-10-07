@@ -1,7 +1,74 @@
-# Preguntas de evaluación con respuesta esperada. (Fase 4)
-# Ejemplo:
-# - id: q01
-#   dataset: data/sample/ventas.csv
-#   question: "¿Cuál fue el producto con más unidades vendidas?"
-#   expected: "..."
-#   check: exact   # exact | contains | numeric_tolerance
+# Preguntas de evaluación con respuesta esperada. El script que las evalúa llega en la Fase 4.
+#
+# Cada caso tiene una lista de `checks`; el caso acierta si pasan todos:
+#   numeric:        la respuesta contiene `value` (± `tolerance`), aceptando formatos como
+#                   275 858,67 · 275.858,67 · 275858.67
+#   contains:       aparecen todos los `terms` (sin distinguir mayúsculas ni tildes)
+#   not_computable: la respuesta dice que no se puede calcular (al menos una de `refusal_any`),
+#                   menciona todo lo de `mentions_all` y no contiene nada de `must_not_contain`
+
+- id: q01
+  dataset: data/sample/ventas.csv
+  question: "¿Qué región generó más ingresos?"
+  checks:
+    - {type: contains, terms: [Centro]}
+    - {type: numeric, value: 275858.67, tolerance: 0.01}
+
+- id: q02
+  dataset: data/sample/ventas.csv
+  question: "¿Cuánto ingreso generó cada región?"
+  checks:
+    - {type: numeric, value: 275858.67, tolerance: 0.01}  # Centro
+    - {type: numeric, value: 192470.52, tolerance: 0.01}  # Sur
+    - {type: numeric, value: 183995.19, tolerance: 0.01}  # Este
+    - {type: numeric, value: 174832.83, tolerance: 0.01}  # Oeste
+    - {type: numeric, value: 137929.22, tolerance: 0.01}  # Norte
+
+- id: q03
+  dataset: data/sample/ventas.csv
+  question: "¿Cuál fue el mes con más ingresos?"
+  checks:
+    - {type: contains, terms: [febrero]}
+    - {type: numeric, value: 132836.23, tolerance: 0.01}
+
+- id: q04
+  dataset: data/sample/ventas.csv
+  question: "¿Cuál fue el mes con menos ingresos?"
+  checks:
+    - {type: contains, terms: [marzo]}
+    - {type: numeric, value: 46658.94, tolerance: 0.01}
+
+- id: q05
+  dataset: data/sample/ventas.csv
+  question: "¿Qué producto vendió más unidades?"
+  checks:
+    - {type: contains, terms: [Escritorio]}
+    - {type: numeric, value: 629, tolerance: 0}
+
+- id: q06
+  dataset: data/sample/ventas.csv
+  question: "¿Cuál fue la ganancia neta del año?"
+  checks:
+    - type: not_computable
+      refusal_any: [no se puede, no es posible, no puedo, no permite, no hay datos, no contiene]
+      mentions_all: [cost]
+      # Frases que presentarían el ingreso como ganancia. La cifra 965 086,43 puede aparecer
+      # si se ofrece como ingreso, así que no se busca la cifra.
+      must_not_contain:
+        - ganancia neta fue
+        - ganancia neta es de
+        - ganancia neta del año fue
+        - ganancia neta asciende
+
+- id: q07
+  dataset: data/sample/ventas.csv
+  question: "¿Cuántos clientes distintos compraron?"
+  checks:
+    - type: not_computable
+      refusal_any: [no se puede, no es posible, no puedo, no permite, no hay datos, no contiene]
+      mentions_all: [cliente]
+      must_not_contain:
+        - clientes distintos fueron
+        - compraron 500 clientes
+        - 500 clientes distintos
+        - hubo 500 clientes

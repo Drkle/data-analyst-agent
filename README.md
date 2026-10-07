@@ -60,6 +60,18 @@ python -m data_analyst_agent.cli data/sample/ventas.csv
 streamlit run app/streamlit_app.py
 ```
 
+## Privacidad
+
+- **Qué se envía al proveedor del modelo (Groq o Gemini):** tu pregunta, los nombres y tipos
+  de las columnas, 5 filas de ejemplo, estadísticas descriptivas y la salida de cada código
+  ejecutado. El archivo completo nunca se envía, pero esas muestras sí salen de tu equipo:
+  no uses datos sensibles con un proveedor externo.
+- **Archivo subido:** se guarda solo en la carpeta de trabajo de la sesión
+  (`sandbox_workspace/<id>/`) y se borra al cambiar o quitar el archivo en la app.
+- **Telemetría:** el envío de estadísticas de uso de Streamlit está desactivado en
+  `.streamlit/config.toml` (`gatherUsageStats = false`).
+- **Claves:** el `.env` con las API keys está en `.gitignore` y nunca se sube al repositorio.
+
 ## Evaluaciones
 
 <!-- TODO (Fase 4): publicar resultados -->
@@ -139,6 +151,17 @@ Criterio de cierre — 5 preguntas con Groq (`openai/gpt-oss-120b`), 5/5 correct
 
 Criterio de cierre: se subió `ventas.csv` a la app y, preguntando en español, se obtuvo la
 gráfica de ingresos diarios.
+
+**Ajustes tras probar la Fase 2**
+
+- Métricas no calculables: el prompt obliga a decir que no se puede calcular (y qué falta)
+  en vez de sustituir una métrica por otra. Probado con Groq: ganancia neta y clientes
+  distintos responden correctamente que faltan datos.
+- Fechas en las gráficas con formato numérico (`chart_format.py`, fuera del sandbox): eje
+  `%m/%Y` que pasa a días o años con el zoom, y `%d/%m/%Y` al pasar el ratón.
+- Barras ordenadas de mayor a menor salvo orden natural (regla del prompt).
+- Telemetría de Streamlit desactivada y sección de privacidad en este README.
+- `evals/questions.yaml`: casos q01–q07, incluidos dos de métricas no calculables.
 
 ## Licencia
 

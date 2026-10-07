@@ -1,3 +1,7 @@
 [server]
 # Límite de subida en MB. Streamlit rechaza archivos mayores antes de que lleguen a la app.
 maxUploadSize = 50
+
+[browser]
+# Desactiva el envío de estadísticas de uso a Streamlit.
+gatherUsageStats = false

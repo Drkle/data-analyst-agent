@@ -15,6 +15,7 @@ from typing import Any
 
 import pandas as pd
 
+from data_analyst_agent.chart_format import format_figure
 from data_analyst_agent.llm import INVALID_ARGUMENTS_KEY, ToolDefinition
 from data_analyst_agent.sandbox import new_session_dir, run_code
 
@@ -195,7 +196,7 @@ class DataTools:
 
         info = json.loads(chart_path.read_text(encoding="utf-8"))
         chart = Chart(
-            figure_json=info["figure"],
+            figure_json=format_figure(info["figure"]),
             kind=", ".join(info["types"]),
             x_label=info["x"],
             y_label=info["y"],
