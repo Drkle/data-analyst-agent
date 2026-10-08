@@ -58,7 +58,20 @@ def test_run_python_stops_on_timeout(tools: DataTools) -> None:
 def test_run_python_truncates_long_output(tools: DataTools) -> None:
     output = tools.run_python("print('x' * 10000)")
     assert "salida recortada" in output
-    assert len(output) < MAX_OUTPUT_CHARS + 100
+    assert len(output) < MAX_OUTPUT_CHARS + 150
+
+
+def test_run_python_reports_omitted_lines(tools: DataTools) -> None:
+    output = tools.run_python("for i in range(2000):\n    print(f'fila {i}')")
+    assert "fila 0" in output
+    assert "[salida recortada: se omitieron" in output
+    assert "de 2000 líneas" in output
+
+
+def test_run_python_prints_all_rows_of_medium_tables(tools: DataTools) -> None:
+    output = tools.run_python("print(pd.DataFrame({'n': range(100)}))")
+    assert "99" in output
+    assert "..." not in output
 
 
 def test_create_chart_returns_figure_and_summary(tools: DataTools) -> None:

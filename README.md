@@ -163,6 +163,33 @@ gráfica de ingresos diarios.
 - Telemetría de Streamlit desactivada y sección de privacidad en este README.
 - `evals/questions.yaml`: casos q01–q07, incluidos dos de métricas no calculables.
 
+**Verificador de cifras**
+
+Al probar una gráfica mensual, el modelo dio 12 cifras habiendo impreso solo 5 (`head()`):
+7 eran inventadas. Ahora `verifier.py` comprueba cada número de la respuesta final contra
+las salidas de todas las herramientas de la conversación (redondeando a la precisión de la
+respuesta, con abreviaturas como "mil" o "M" y probando ambas lecturas de separadores
+ambiguos). Ignora años, fechas, enteros de un dígito y números de la pregunta. Si falta
+alguna cifra, la respuesta vuelve al modelo (máximo 2 veces); si persiste, se entrega con un
+aviso de "cifras sin verificar". Cada resultado registra cuántas veces se activó y cuántas
+cifras se corrigieron. Además, las salidas recortadas lo indican ("se omitieron N de M
+líneas") y pandas ya no oculta filas con "...". Caso de evaluación q08 con los 12 valores.
+
+**Arreglos tras probar el verificador**
+
+- Error `tool_use_failed` de Groq (el modelo escribe mal la llamada a una herramienta): se
+  reintenta hasta 2 veces y, si persiste, se muestra un mensaje claro en español. Lo mismo
+  para el 429 persistente y otros errores del proveedor; el detalle técnico queda en
+  `LLMError.detail`. Cada respuesta registra cuántos de estos errores se recuperaron.
+- Formato colombiano de números (51.697,33) en el prompt, en las gráficas y en la vista
+  previa de la app (los enteros se dejan sin separador para no deformar años ni ids). El
+  verificador reconoce este formato.
+- El verificador muestra "✓ Cifras verificadas contra el código ejecutado" cuando todo
+  cuadra; su detalle pasa al desplegable "Código ejecutado". Las cifras sin verificar siguen
+  con aviso visible.
+- Se borró `PLAN.md` de la raíz (versión vieja); el plan vigente es `docs/PLAN.md`.
+- `.gitattributes` normaliza los fines de línea a LF.
+
 ## Licencia
 
 MIT

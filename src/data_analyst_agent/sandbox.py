@@ -27,6 +27,11 @@ import traceback
 
 import pandas as pd
 
+# Que pandas no oculte filas ni columnas con "...": el recorte lo hace el host y lo avisa.
+pd.set_option("display.max_rows", 500)
+pd.set_option("display.max_columns", 50)
+pd.set_option("display.width", 200)
+
 data_path, chart_path, max_points = sys.argv[1], sys.argv[2], int(sys.argv[3])
 df = pd.read_excel(data_path) if data_path.lower().endswith(".xlsx") else pd.read_csv(data_path)
 namespace = {"__name__": "__main__", "pd": pd, "df": df}

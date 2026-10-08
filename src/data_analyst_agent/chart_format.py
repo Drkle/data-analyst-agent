@@ -2,6 +2,7 @@
 
 Se aplican al JSON de la figura fuera del sandbox y no dependen del modelo.
 
+- Números en formato colombiano (51.697,33) en ejes y hover.
 - Ejes de fechas: formato numérico (%m/%Y), que pasa a días o años según el zoom, para
   no mostrar nombres de meses en inglés. Al pasar el ratón, la fecha completa (%d/%m/%Y).
 """
@@ -16,6 +17,8 @@ import numpy as np
 import plotly.graph_objects as go
 import plotly.io as pio
 
+# Formato colombiano en ejes y hover: coma decimal y punto de miles (51.697,33).
+NUMBER_SEPARATORS = ",."
 DATE_TICKFORMAT = "%m/%Y"
 DATE_HOVERFORMAT = "%d/%m/%Y"
 # Formato de las marcas según la distancia entre ellas, para que el zoom siga siendo legible.
@@ -33,6 +36,7 @@ def format_figure(figure_json: str) -> str:
     """Devuelve el JSON de la figura con los ajustes de formato aplicados."""
     fig = pio.from_json(figure_json)
     format_date_axes(fig)
+    fig.update_layout(separators=NUMBER_SEPARATORS)
     return fig.to_json()
 
 

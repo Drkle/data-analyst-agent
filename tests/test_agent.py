@@ -2,8 +2,10 @@
 
 from typing import Any
 
+import pytest
+
 from data_analyst_agent.agent import Agent
-from data_analyst_agent.llm import LLMResponse, Message, ToolCall, ToolDefinition
+from data_analyst_agent.llm import LLMError, LLMResponse, Message, ToolCall, ToolDefinition
 from data_analyst_agent.tools import Chart, ToolResult
 
 CHART = Chart(figure_json="{}", kind="bar", x_label="x", y_label="y", title="t", points=3)
@@ -22,16 +24,17 @@ class ScriptedLLM:
 
 
 class FakeTools:
-    def __init__(self, fail: bool = False) -> None:
+    def __init__(self, fail: bool = False, output: str | None = None) -> None:
         self.definitions: list[ToolDefinition] = []
         self.fail = fail
+        self.output = output
 
     def execute(self, name: str, arguments: dict[str, Any]) -> ToolResult:
         if self.fail:
             raise RuntimeError("se rompió")
         if name == "create_chart":
             return ToolResult("Gráfica creada", chart=CHART)
-        return ToolResult(f"resultado de {name}")
+        return ToolResult(self.output or f"resultado de {name}")
 
 
 def _tool_response(call_id: str = "c1", name: str = "run_python") -> LLMResponse:
@@ -101,3 +104,83 @@ def test_charts_beyond_limit_are_rejected() -> None:
 
     assert len(result.charts) == 1
     assert "máximo" in result.steps[1].output
+
+
+def test_verified_answer_does_not_trigger_verifier() -> None:
+    llm = ScriptedLLM([_tool_response(), LLMResponse(text="Centro: 275 858,67.")])
+    result = Agent(llm, FakeTools(output="Centro 275858.67")).run("¿Región con más ingresos?")
+
+    assert result.verification.triggers == 0
+    assert result.verification.unverified == []
+    assert result.iterations == 2
+
+
+def test_verifier_sends_invented_figures_back_to_model() -> None:
+    llm = ScriptedLLM(
+        [
+            _tool_response(),
+            LLMResponse(text="Centro: 275 858,67. Junio: 84 112,45."),
+            LLMResponse(text="Centro: 275 858,67."),
+        ]
+    )
+    result = Agent(llm, FakeTools(output="Centro 275858.67")).run("¿Ingresos?")
+
+    feedback = llm.calls[2][-1]
+    assert feedback.role == "user"
+    assert "84 112,45" in feedback.content
+    assert result.answer == "Centro: 275 858,67."
+    assert result.verification.triggers == 1
+    assert result.verification.flagged == 1
+    assert result.verification.corrected == 1
+    assert result.verification.unverified == []
+
+
+def test_verifier_gives_up_and_marks_figures() -> None:
+    invented = LLMResponse(text="Junio: 84 112,45.")
+    llm = ScriptedLLM([invented, invented, invented])
+    result = Agent(llm, FakeTools(), max_verifications=2).run("¿Ingresos?")
+
+    assert result.answer == "Junio: 84 112,45."
+    assert result.verification.triggers == 2
+    assert result.verification.unverified == ["84 112,45"]
+    assert result.verification.corrected == 0
+
+
+class FailingThenScriptedLLM(ScriptedLLM):
+    """Como ScriptedLLM, pero lanza las excepciones que encuentre en el guion."""
+
+    def chat(self, messages: list[Message], tools: list[ToolDefinition]) -> LLMResponse:
+        self.calls.append(list(messages))
+        item = self.responses.pop(0)
+        if isinstance(item, Exception):
+            raise item
+        return item
+
+
+def test_tool_format_errors_are_added_up_per_answer() -> None:
+    first = _tool_response()
+    first.tool_format_errors = 1
+    final = LLMResponse(text="listo", tool_format_errors=2)
+    result = Agent(ScriptedLLM([first, final]), FakeTools()).run("pregunta")
+
+    assert result.tool_format_errors == 3
+
+
+def test_llm_error_carries_the_answer_total() -> None:
+    first = _tool_response()
+    first.tool_format_errors = 1
+    failure = LLMError("El modelo no logró preparar el análisis.", tool_format_errors=3)
+    llm = FailingThenScriptedLLM([first, failure])  # type: ignore[list-item]
+
+    with pytest.raises(LLMError) as error:
+        Agent(llm, FakeTools()).run("pregunta")
+    assert error.value.tool_format_errors == 4
+
+
+def test_checked_counts_figures_of_the_final_answer() -> None:
+    llm = ScriptedLLM([_tool_response(), LLMResponse(text="Centro: 275.858,67. Sur: 192.470,52.")])
+    output = "Centro 275858.67\nSur 192470.52"
+    result = Agent(llm, FakeTools(output=output)).run("¿Ingresos por región?")
+
+    assert result.verification.checked == 2
+    assert result.verification.unverified == []

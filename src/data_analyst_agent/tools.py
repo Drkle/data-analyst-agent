@@ -94,10 +94,27 @@ def load_dataframe(path: Path) -> pd.DataFrame:
 
 
 def truncate(text: str, limit: int = MAX_OUTPUT_CHARS) -> str:
-    """Recorta salidas largas para no saturar el contexto del modelo."""
+    """Recorta salidas largas para no saturar el contexto, avisando de lo que falta."""
     if len(text) <= limit:
         return text
-    return f"{text[:limit]}\n... [salida recortada: {len(text) - limit} caracteres omitidos]"
+    lines = text.splitlines()
+    kept: list[str] = []
+    size = 0
+    for line in lines:
+        if size + len(line) + 1 > limit:
+            break
+        kept.append(line)
+        size += len(line) + 1
+    if not kept:  # una sola línea enorme
+        return (
+            f"{text[:limit]}\n[salida recortada: se omitieron {len(text) - limit} caracteres. "
+            "Te faltan datos: imprime solo lo necesario.]"
+        )
+    omitted = len(lines) - len(kept)
+    return (
+        "\n".join(kept) + f"\n[salida recortada: se omitieron {omitted} de {len(lines)} líneas. "
+        "Te faltan datos: agrega o imprime solo lo necesario antes de dar cifras.]"
+    )
 
 
 class DataTools:

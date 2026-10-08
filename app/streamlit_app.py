@@ -18,6 +18,7 @@ import streamlit as st
 
 from data_analyst_agent.agent import Agent, AgentResult
 from data_analyst_agent.config import ConfigError, Settings, load_settings
+from data_analyst_agent.formatting import format_preview
 from data_analyst_agent.llm import LLMError, create_client
 from data_analyst_agent.sandbox import new_session_dir, remove_session_dir
 from data_analyst_agent.tools import MAX_FILE_BYTES, DataTools, load_dataframe
@@ -56,14 +57,34 @@ def start_session(uploaded: Any, settings: Settings) -> None:
 def render_result(result: AgentResult) -> None:
     # "$" activa fórmulas LaTeX en st.markdown; se escapa para mostrar importes tal cual.
     st.markdown(result.answer.replace("$", "\\$"))
+    verification = result.verification
+    if verification.unverified:
+        st.warning(
+            "Cifras sin verificar con código: "
+            + ", ".join(verification.unverified).replace("$", "\\$")
+        )
+    elif verification.checked:
+        st.caption("✓ Cifras verificadas contra el código ejecutado")
     for chart in result.charts:
         st.plotly_chart(pio.from_json(chart.figure_json))
+
     code_steps = [step for step in result.steps if step.tool in CODE_TOOLS]
-    if code_steps:
+    if code_steps or verification.triggers or result.tool_format_errors:
         with st.expander("Código ejecutado"):
             for step in code_steps:
                 st.caption(step.tool)
                 st.code(step.arguments.get("code", ""), language="python")
+            if verification.triggers:
+                times = "vez" if verification.triggers == 1 else "veces"
+                st.caption(
+                    f"Verificador de cifras: se activó {verification.triggers} {times}; "
+                    f"cifras corregidas: {verification.corrected}."
+                )
+            if result.tool_format_errors:
+                st.caption(
+                    "Llamadas a herramientas repetidas por formato inválido: "
+                    f"{result.tool_format_errors}."
+                )
 
 
 def main() -> None:
@@ -106,7 +127,7 @@ def main() -> None:
     with st.sidebar:
         st.subheader(st.session_state.file_name)
         preview: pd.DataFrame = st.session_state.preview
-        st.dataframe(preview, hide_index=True)
+        st.dataframe(format_preview(preview), hide_index=True)
 
     history: list[dict[str, Any]] = st.session_state.history
     for entry in history:
@@ -129,7 +150,7 @@ def main() -> None:
             with st.spinner("Analizando..."):
                 result = st.session_state.agent.run(question)
         except LLMError as exc:
-            message = f"Error al consultar el modelo: {exc}"
+            message = f"No pude responder: {exc}"
             st.error(message)
             history.append({"role": "assistant", "content": message})
             return

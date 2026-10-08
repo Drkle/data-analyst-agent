@@ -61,3 +61,8 @@ def test_figures_without_axes_are_untouched() -> None:
         values="ingreso",
     )
     assert "xaxis" not in _formatted(pie.to_json())["layout"]
+
+
+def test_numbers_use_colombian_separators() -> None:
+    fig = _formatted(px.bar(pd.DataFrame({"r": ["a"], "v": [1.5]}), x="r", y="v").to_json())
+    assert fig["layout"]["separators"] == ",."

@@ -72,3 +72,21 @@
         - compraron 500 clientes
         - 500 clientes distintos
         - hubo 500 clientes
+
+- id: q08
+  dataset: data/sample/ventas.csv
+  # Pregunta en la que el modelo inventó 7 de 12 cifras (solo había impreso head()).
+  question: "Haz una gráfica de la evolución mensual de los ingresos"
+  checks:
+    - {type: numeric, value: 51697.33, tolerance: 0.01}  # enero
+    - {type: numeric, value: 132836.23, tolerance: 0.01}  # febrero
+    - {type: numeric, value: 46658.94, tolerance: 0.01}  # marzo
+    - {type: numeric, value: 76086.18, tolerance: 0.01}  # abril
+    - {type: numeric, value: 71926.73, tolerance: 0.01}  # mayo
+    - {type: numeric, value: 89762.44, tolerance: 0.01}  # junio
+    - {type: numeric, value: 105265.08, tolerance: 0.01}  # julio
+    - {type: numeric, value: 93431.43, tolerance: 0.01}  # agosto
+    - {type: numeric, value: 58804.72, tolerance: 0.01}  # septiembre
+    - {type: numeric, value: 55761.56, tolerance: 0.01}  # octubre
+    - {type: numeric, value: 76988.06, tolerance: 0.01}  # noviembre
+    - {type: numeric, value: 105867.73, tolerance: 0.01}  # diciembre

@@ -54,7 +54,9 @@ def main(argv: list[str] | None = None) -> int:
         try:
             result = agent.run(question)
         except LLMError as exc:
-            print(f"Error al consultar el modelo: {exc}")
+            print(f"No pude responder: {exc}")
+            if args.verbose and exc.detail:
+                print(f"--- detalle técnico ---\n{exc.detail}")
             continue
         _print_result(result, verbose=args.verbose, charts_dir=tools.workdir / "charts")
 
@@ -71,7 +73,21 @@ def _print_result(result: AgentResult, verbose: bool, charts_dir: Path) -> None:
         pio.from_json(chart.figure_json).write_html(path, include_plotlyjs="cdn")
         print(f"\nGráfica {index} ({chart.kind}, {chart.points} puntos): {path.resolve()}")
     print(f"\n{result.answer}")
-    print(f"\n({result.iterations} iteraciones)")
+    verification = result.verification
+    if verification.unverified:
+        print(f"\n⚠️ Cifras sin verificar con código: {', '.join(verification.unverified)}")
+    elif verification.checked:
+        print("\n✓ Cifras verificadas contra el código ejecutado")
+    summary = f"{result.iterations} iteraciones"
+    if result.tool_format_errors:
+        summary += f" · llamadas repetidas por formato inválido: {result.tool_format_errors}"
+    if verification.triggers:
+        times = "vez" if verification.triggers == 1 else "veces"
+        summary += (
+            f" · verificador: se activó {verification.triggers} {times}, "
+            f"cifras corregidas: {verification.corrected}"
+        )
+    print(f"\n({summary})")
 
 
 if __name__ == "__main__":

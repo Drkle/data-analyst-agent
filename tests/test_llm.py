@@ -5,7 +5,7 @@ from typing import Any
 
 import httpx2 as httpx
 import pytest
-from openai import RateLimitError
+from openai import BadRequestError, RateLimitError
 
 from data_analyst_agent.config import Settings
 from data_analyst_agent.llm import (
@@ -81,9 +81,50 @@ def test_retries_429_with_exponential_backoff() -> None:
 
 def test_raises_llm_error_when_retries_exhausted() -> None:
     client, completions, _ = _client([_rate_limit(), _rate_limit(), _rate_limit()])
-    with pytest.raises(LLMError, match="429"):
+    with pytest.raises(LLMError, match="demasiadas peticiones") as error:
         client.chat([Message(role="user", content="x")], [])
+    assert "429" in error.value.detail
     assert len(completions.requests) == 3
+
+
+def _bad_request(code: str) -> BadRequestError:
+    """Error 400 tal como lo construye el SDK con la respuesta de Groq."""
+    body = {
+        "message": "Failed to parse tool call arguments as JSON",
+        "type": "invalid_request_error",
+        "code": code,
+    }
+    response = httpx.Response(400, request=httpx.Request("POST", "https://x"))
+    return BadRequestError(f"Error code: 400 - {body}", response=response, body=body)
+
+
+def test_retries_tool_use_failed_and_counts_it() -> None:
+    client, completions, _ = _client([_bad_request("tool_use_failed"), _completion("ok")])
+    response = client.chat([Message(role="user", content="x")], [])
+    assert response.text == "ok"
+    assert response.tool_format_errors == 1
+    assert len(completions.requests) == 2
+
+
+def test_tool_use_failed_gives_up_with_clear_message() -> None:
+    client, completions, _ = _client([_bad_request("tool_use_failed")] * 3)
+    with pytest.raises(LLMError) as error:
+        client.chat([Message(role="user", content="x")], [])
+
+    message = str(error.value)
+    assert message.startswith("El modelo no logró preparar el análisis")
+    assert "400" not in message and "tool_use_failed" not in message and "{" not in message
+    assert "tool_use_failed" in error.value.detail
+    assert error.value.tool_format_errors == 3
+    assert len(completions.requests) == 3  # 1 intento + 2 reintentos
+
+
+def test_other_bad_requests_are_not_retried() -> None:
+    client, completions, _ = _client([_bad_request("context_length_exceeded")])
+    with pytest.raises(LLMError, match="error inesperado") as error:
+        client.chat([Message(role="user", content="x")], [])
+    assert error.value.tool_format_errors == 0
+    assert len(completions.requests) == 1
 
 
 def test_parses_tool_calls() -> None:

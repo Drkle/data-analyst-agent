@@ -26,8 +26,21 @@ MAX_RETRY_WAIT = 60.0
 INVALID_ARGUMENTS_KEY = "_invalid_arguments"
 
 
+MAX_TOOL_FORMAT_RETRIES = 2
+# Código con el que Groq rechaza una llamada a herramienta cuyos argumentos no son JSON.
+TOOL_FORMAT_ERROR_CODE = "tool_use_failed"
+
+
 class LLMError(Exception):
-    """Fallo al llamar al modelo (incluye agotar los reintentos ante 429)."""
+    """Fallo al llamar al modelo, tras agotar los reintentos.
+
+    El mensaje está pensado para el usuario; `detail` guarda el error técnico del proveedor.
+    """
+
+    def __init__(self, message: str, detail: str = "", tool_format_errors: int = 0) -> None:
+        super().__init__(message)
+        self.detail = detail
+        self.tool_format_errors = tool_format_errors
 
 
 @dataclass
@@ -57,6 +70,8 @@ class LLMResponse:
     text: str
     tool_calls: list[ToolCall] = field(default_factory=list)
     total_tokens: int | None = None
+    # Errores tool_use_failed recuperados con reintentos antes de obtener esta respuesta.
+    tool_format_errors: int = 0
 
 
 class LLMClient(Protocol):
@@ -71,8 +86,10 @@ class OpenAICompatibleClient:
         settings: Settings,
         client: Any | None = None,
         sleep: Callable[[float], None] = time.sleep,
+        tool_format_retries: int = MAX_TOOL_FORMAT_RETRIES,
     ) -> None:
         self._settings = settings
+        self._tool_format_retries = tool_format_retries
         # max_retries=0: los reintentos los gestiona esta clase, no el SDK.
         self._client = client or OpenAI(
             api_key=settings.api_key, base_url=settings.base_url, max_retries=0
@@ -89,21 +106,43 @@ class OpenAICompatibleClient:
         if tools:
             request["tools"] = [_to_openai_tool(t) for t in tools]
 
-        for attempt in range(self._settings.max_retries + 1):
+        rate_limit_retries = 0
+        tool_format_errors = 0
+        while True:
             self._throttle()
             try:
                 response = self._client.chat.completions.create(**request)
             except RateLimitError as exc:
-                if attempt == self._settings.max_retries:
+                if rate_limit_retries == self._settings.max_retries:
                     raise LLMError(
-                        f"Límite de tasa persistente (429) tras {attempt + 1} intentos"
+                        "El proveedor del modelo está recibiendo demasiadas peticiones. "
+                        "Espera un minuto y vuelve a intentarlo.",
+                        detail=f"429 tras {rate_limit_retries + 1} intentos: {exc}",
+                        tool_format_errors=tool_format_errors,
                     ) from exc
-                self._sleep(_retry_delay(exc, attempt))
+                self._sleep(_retry_delay(exc, rate_limit_retries))
+                rate_limit_retries += 1
             except APIError as exc:
-                raise LLMError(f"Error del proveedor {self._settings.provider}: {exc}") from exc
+                if getattr(exc, "code", None) != TOOL_FORMAT_ERROR_CODE:
+                    raise LLMError(
+                        "El proveedor del modelo devolvió un error inesperado. "
+                        "Vuelve a intentarlo en unos segundos.",
+                        detail=f"{self._settings.provider}: {exc}",
+                        tool_format_errors=tool_format_errors,
+                    ) from exc
+                # El modelo escribió mal la llamada a la herramienta: suele bastar con repetir.
+                tool_format_errors += 1
+                if tool_format_errors > self._tool_format_retries:
+                    raise LLMError(
+                        "El modelo no logró preparar el análisis en el formato esperado. "
+                        "Vuelve a intentarlo o reformula la pregunta.",
+                        detail=f"{TOOL_FORMAT_ERROR_CODE} {tool_format_errors} veces: {exc}",
+                        tool_format_errors=tool_format_errors,
+                    ) from exc
             else:
-                return _from_openai_response(response)
-        raise AssertionError("inalcanzable")
+                result = _from_openai_response(response)
+                result.tool_format_errors = tool_format_errors
+                return result
 
     def _throttle(self) -> None:
         """Respeta una pausa mínima entre llamadas para no agotar el cupo por minuto."""
