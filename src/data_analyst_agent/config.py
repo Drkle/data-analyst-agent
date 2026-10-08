@@ -30,6 +30,10 @@ class Settings:
     call_delay: float = 1.0
     max_tokens: int = 2048
     sandbox_timeout: float = 30.0
+    # Pensados para la capa gratuita de Groq (8.000 tokens por minuto): el historial previo
+    # se reenvía en cada llamada, unas 3 por pregunta.
+    history_full_turns: int = 1
+    history_token_budget: int = 1500
 
 
 def load_settings(env_file: Path | None = Path(".env")) -> Settings:
@@ -58,6 +62,8 @@ def load_settings(env_file: Path | None = Path(".env")) -> Settings:
         call_delay=_env_float("CALL_DELAY_SECONDS", Settings.call_delay),
         max_tokens=_env_int("MAX_TOKENS", Settings.max_tokens),
         sandbox_timeout=_env_float("SANDBOX_TIMEOUT", Settings.sandbox_timeout),
+        history_full_turns=_env_int("HISTORY_FULL_TURNS", Settings.history_full_turns),
+        history_token_budget=_env_int("HISTORY_TOKEN_BUDGET", Settings.history_token_budget),
     )
 
 

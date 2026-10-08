@@ -49,7 +49,7 @@ def start_session(uploaded: Any, settings: Settings) -> None:
         file_id=uploaded.file_id,
         file_name=uploaded.name,
         preview=load_dataframe(data_path).head(10),
-        agent=Agent(create_client(settings), tools, max_iterations=settings.max_iterations),
+        agent=Agent.from_settings(create_client(settings), tools, settings),
         history=[],
     )
 

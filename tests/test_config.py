@@ -16,6 +16,8 @@ ENV_VARS = [
     "CALL_DELAY_SECONDS",
     "MAX_TOKENS",
     "SANDBOX_TIMEOUT",
+    "HISTORY_FULL_TURNS",
+    "HISTORY_TOKEN_BUDGET",
 ]
 
 
@@ -63,3 +65,15 @@ def test_invalid_number_raises(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("MAX_ITERATIONS", "muchas")
     with pytest.raises(ConfigError, match="MAX_ITERATIONS"):
         load_settings(env_file=None)
+
+
+def test_history_defaults_fit_groq_free_tier(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("GROQ_API_KEY", "clave-de-prueba")
+    settings = load_settings(env_file=None)
+    assert settings.history_full_turns == 1
+    assert settings.history_token_budget == 1500
+
+    monkeypatch.setenv("HISTORY_FULL_TURNS", "3")
+    monkeypatch.setenv("HISTORY_TOKEN_BUDGET", "4000")
+    settings = load_settings(env_file=None)
+    assert (settings.history_full_turns, settings.history_token_budget) == (3, 4000)

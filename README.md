@@ -190,6 +190,18 @@ líneas") y pandas ya no oculta filas con "...". Caso de evaluación q08 con los
 - Se borró `PLAN.md` de la raíz (versión vieja); el plan vigente es `docs/PLAN.md`.
 - `.gitattributes` normaliza los fines de línea a LF.
 
+**Historial acotado y preguntas transaccionales**
+
+- Cada llamada al modelo reenvía el contexto, y la capa gratuita de Groq admite 8.000
+  tokens por minuto. Ahora `history.py` envía completo solo el último turno
+  (`HISTORY_FULL_TURNS=1`); los anteriores van como pregunta + respuesta, sin código ni
+  salidas, y todo el historial previo se limita a ~1.500 tokens (`HISTORY_TOKEN_BUDGET`).
+  El verificador sigue usando todas las salidas, aunque ya no se envíen.
+- Medido con 5 preguntas seguidas: la primera llamada de la 5.ª pregunta pasó de 2.391 a
+  1.212 tokens, y el costo por llamada se estabiliza en lugar de crecer con cada pregunta.
+- Si una llamada falla a mitad de una pregunta, esa pregunta se descarta y el historial
+  queda como estaba (sin pasos huérfanos). Cada respuesta registra sus tokens totales.
+
 ## Licencia
 
 MIT

@@ -36,7 +36,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Error: {exc}")
         return 1
 
-    agent = Agent(create_client(settings), tools, max_iterations=settings.max_iterations)
+    agent = Agent.from_settings(create_client(settings), tools, settings)
     print(f"Analizando {args.archivo.name} con {settings.provider} ({settings.model}).")
     print(f"Carpeta de trabajo de esta sesión: {tools.workdir}")
     print("Escribe 'salir' para terminar.")

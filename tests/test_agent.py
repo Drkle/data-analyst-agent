@@ -184,3 +184,63 @@ def test_checked_counts_figures_of_the_final_answer() -> None:
 
     assert result.verification.checked == 2
     assert result.verification.unverified == []
+
+
+def test_failure_mid_question_leaves_history_unchanged() -> None:
+    failure = LLMError("El proveedor del modelo devolvió un error inesperado.")
+    llm = FailingThenScriptedLLM(
+        [LLMResponse(text="primera"), _tool_response(), failure, LLMResponse(text="tercera")]  # type: ignore[list-item]
+    )
+    agent = Agent(llm, FakeTools())
+    agent.run("pregunta 1")
+    with pytest.raises(LLMError):
+        agent.run("pregunta 2")
+    agent.run("pregunta 3")
+
+    assert [turn.question for turn in agent.turns] == ["pregunta 1", "pregunta 3"]
+    assert [(m.role, m.content) for m in llm.calls[-1][1:]] == [
+        ("user", "pregunta 1"),
+        ("assistant", "primera"),
+        ("user", "pregunta 3"),
+    ]
+
+
+def test_old_turns_are_sent_compacted() -> None:
+    llm = ScriptedLLM(
+        [_tool_response("a"), LLMResponse(text="uno"), _tool_response("b")]
+        + [LLMResponse(text="dos"), LLMResponse(text="tres")]
+    )
+    agent = Agent(llm, FakeTools(), history_full_turns=1)
+    for question in ("pregunta 1", "pregunta 2", "pregunta 3"):
+        agent.run(question)
+
+    sent = llm.calls[-1]
+    assert [(m.role, m.content) for m in sent[1:3]] == [
+        ("user", "pregunta 1"),
+        ("assistant", "uno"),
+    ]
+    assert {m.tool_call_id for m in sent if m.role == "tool"} == {"b"}
+
+
+def test_verifier_still_sees_outputs_no_longer_sent() -> None:
+    llm = ScriptedLLM(
+        [_tool_response(), LLMResponse(text="Centro: 275.858,67."), LLMResponse(text="ok")]
+        + [LLMResponse(text="Como dije, Centro: 275.858,67.")]
+    )
+    agent = Agent(llm, FakeTools(output="Centro 275858.67"), history_full_turns=0)
+    agent.run("¿Región con más ingresos?")
+    agent.run("Gracias")
+    result = agent.run("¿Cuánto era?")
+
+    assert all(m.role != "tool" for m in llm.calls[-1])
+    assert result.verification.unverified == []
+    assert result.verification.triggers == 0
+
+
+def test_total_tokens_are_added_up() -> None:
+    first = _tool_response()
+    first.total_tokens = 900
+    result = Agent(
+        ScriptedLLM([first, LLMResponse(text="ok", total_tokens=1000)]), FakeTools()
+    ).run("pregunta")
+    assert result.total_tokens == 1900
