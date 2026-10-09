@@ -1,0 +1,168 @@
+# Casos de evaluación para los datasets de data/test_sets/ (mismo formato que questions.yaml).
+# Respuestas calculadas con pandas a partir de los archivos generados con SEED = 7.
+#
+# Cada dataset prueba un problema distinto de datos reales; el comentario de cada caso dice
+# qué error delataría una respuesta equivocada.
+
+# --- empleados.csv: fechas dd/mm/aaaa, Sí/No, nulos en edad -------------------------------
+
+- id: t-emp-01
+  dataset: data/test_sets/empleados.csv
+  question: "¿Cuántos empleados activos hay?"
+  checks:
+    - {type: numeric, value: 193, tolerance: 0}
+
+- id: t-emp-02
+  dataset: data/test_sets/empleados.csv
+  question: "¿Cuál es el salario mensual promedio de cada departamento, considerando todos los empleados?"
+  checks:
+    - {type: numeric, value: 7838805.97, tolerance: 1}  # Tecnología
+    - {type: numeric, value: 5821333.33, tolerance: 1}  # Finanzas
+    - {type: numeric, value: 4572941.18, tolerance: 1}  # Talento Humano
+    - {type: numeric, value: 4403571.43, tolerance: 1}  # Ventas
+    - {type: numeric, value: 3674363.64, tolerance: 1}  # Operaciones
+
+- id: t-emp-03
+  dataset: data/test_sets/empleados.csv
+  question: "¿Cuántos empleados ingresaron en el mes de marzo, de cualquier año?"
+  # Trampa de formato de fecha: leyendo las fechas como mm/dd saldrían 4, no 22.
+  checks:
+    - {type: numeric, value: 22, tolerance: 0}
+
+- id: t-emp-04
+  dataset: data/test_sets/empleados.csv
+  question: "¿Qué departamento tiene la edad promedio más alta?"
+  # 12 empleados no tienen edad: deben ignorarse, no contarse como 0.
+  checks:
+    - {type: contains, terms: [Tecnología]}
+    - {type: numeric, value: 43.03, tolerance: 0.01}
+
+- id: t-emp-05
+  dataset: data/test_sets/empleados.csv
+  question: "¿Cuál es el nivel de satisfacción laboral promedio?"
+  checks:
+    - type: not_computable
+      refusal_any: [no se puede, no es posible, no puedo, no permite, no hay datos, no contiene]
+      mentions_all: [satisfacci]
+      must_not_contain: [satisfacción promedio es, satisfacción laboral promedio es]
+
+# --- ventas_excel_colombia.csv: separador ';', decimales con coma, codificación cp1252 ------
+# Hoy la app NO puede cargar este archivo (UnicodeDecodeError). Estos casos fallarán hasta
+# que load_dataframe detecte codificación, separador y decimal.
+
+- id: t-vco-01
+  dataset: data/test_sets/ventas_excel_colombia.csv
+  question: "¿Qué ciudad tuvo el mayor valor total de ventas y cuánto fue?"
+  checks:
+    - {type: contains, terms: [Bogotá]}
+    - {type: numeric, value: 90950117.89, tolerance: 0.01}
+
+- id: t-vco-02
+  dataset: data/test_sets/ventas_excel_colombia.csv
+  question: "¿Cuál fue el valor total vendido de Café especial?"
+  checks:
+    - {type: numeric, value: 106303591.94, tolerance: 0.01}
+
+- id: t-vco-03
+  dataset: data/test_sets/ventas_excel_colombia.csv
+  question: "¿Cuántas unidades se vendieron en diciembre?"
+  # Fechas dd/mm/aaaa: leerlas como mm/dd cambiaría el resultado.
+  checks:
+    - {type: numeric, value: 1703, tolerance: 0}
+
+# --- clima.xlsx: Excel, columnas con tildes, símbolos y unidades, nulos ---------------------
+
+- id: t-cli-01
+  dataset: data/test_sets/clima.xlsx
+  question: "¿Qué ciudad tuvo más precipitación total en 2025 y cuántos milímetros?"
+  checks:
+    - {type: contains, terms: [Medellín]}
+    - {type: numeric, value: 1479.3, tolerance: 0.05}
+
+- id: t-cli-02
+  dataset: data/test_sets/clima.xlsx
+  question: "¿Cuál fue la temperatura mínima más baja registrada, en qué ciudad y en qué fecha?"
+  checks:
+    - {type: contains, terms: [Bogotá]}
+    - {type: numeric, value: 4.7, tolerance: 0}
+    - {type: contains, terms: [noviembre]}  # 6 de noviembre de 2025 (acepta también 06/11/2025 si se ajusta el check)
+
+- id: t-cli-03
+  dataset: data/test_sets/clima.xlsx
+  question: "¿En cuántos días llovió más de 20 mm en Medellín?"
+  checks:
+    - {type: numeric, value: 18, tolerance: 0}
+
+- id: t-cli-04
+  dataset: data/test_sets/clima.xlsx
+  question: "¿Qué temperatura máxima va a hacer mañana en Cali?"
+  # Pronóstico: los datos son históricos, no se puede predecir con ellos.
+  checks:
+    - type: not_computable
+      refusal_any: [no se puede, no es posible, no puedo, no permite, no hay datos, no contiene, histór]
+      mentions_all: []
+      must_not_contain: [mañana hará, mañana la temperatura será, mañana será de]
+
+# --- encuesta.csv: escala 1-5 con vacíos, Sí/No con vacíos, texto con comas y comillas ------
+
+- id: t-enc-01
+  dataset: data/test_sets/encuesta.csv
+  question: "¿Cuál es la puntuación promedio de cada canal?"
+  # 28 respuestas sin puntuación: deben ignorarse, no contarse como 0.
+  checks:
+    - {type: numeric, value: 3.88, tolerance: 0.005}  # App
+    - {type: numeric, value: 3.44, tolerance: 0.005}  # Web
+    - {type: numeric, value: 3.26, tolerance: 0.005}  # Tienda física
+
+- id: t-enc-02
+  dataset: data/test_sets/encuesta.csv
+  question: "De quienes respondieron la pregunta, ¿qué porcentaje recomendaría la marca?"
+  # 330 respuestas válidas; si se divide entre las 350 filas el resultado es otro.
+  checks:
+    - {type: numeric, value: 49.39, tolerance: 0.01}
+
+- id: t-enc-03
+  dataset: data/test_sets/encuesta.csv
+  question: "¿Cuántas respuestas no tienen puntuación?"
+  checks:
+    - {type: numeric, value: 28, tolerance: 0}
+
+- id: t-enc-04
+  dataset: data/test_sets/encuesta.csv
+  question: "¿Cuántos clientes distintos respondieron la encuesta?"
+  # respuesta_id identifica respuestas, no clientes.
+  checks:
+    - type: not_computable
+      refusal_any: [no se puede, no es posible, no puedo, no permite, no hay datos, no contiene, no identifica]
+      mentions_all: [client]
+      must_not_contain: [respondieron 350 clientes, 350 clientes distintos]
+
+# --- inventario_sucio.csv: columnas con espacios, duplicados, "$1.250", "N/A" y "-" ---------
+
+- id: t-inv-01
+  dataset: data/test_sets/inventario_sucio.csv
+  question: "¿Hay filas duplicadas? ¿Cuántas?"
+  checks:
+    - {type: numeric, value: 6, tolerance: 0}
+
+- id: t-inv-02
+  dataset: data/test_sets/inventario_sucio.csv
+  question: "¿Cuántos productos distintos hay en el inventario?"
+  # 86 filas, pero solo 80 productos: contar filas es el error típico.
+  checks:
+    - {type: numeric, value: 80, tolerance: 0}
+
+- id: t-inv-03
+  dataset: data/test_sets/inventario_sucio.csv
+  question: "¿Cuántos productos no tienen dato de stock?"
+  # 5 tienen "N/A" (pandas los lee como nulos) y 4 tienen "-" (quedan como texto).
+  # Responder 5 delata que solo contó los nulos.
+  checks:
+    - {type: numeric, value: 9, tolerance: 0}
+
+- id: t-inv-04
+  dataset: data/test_sets/inventario_sucio.csv
+  question: "¿Cuál es el valor total del inventario (precio por stock), sin contar filas duplicadas e ignorando los productos sin dato de stock?"
+  # Precios como texto "$33.350" (punto = miles). Sin quitar duplicados saldría 374.181.350.
+  checks:
+    - {type: numeric, value: 348468550, tolerance: 0}

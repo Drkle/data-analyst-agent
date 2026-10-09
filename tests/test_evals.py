@@ -1,4 +1,4 @@
-"""Valida el formato de evals/questions.yaml (el script de evaluación llega en la Fase 4)."""
+"""Valida el formato de los casos de evaluación (el script de evaluación llega en la Fase 4)."""
 
 from pathlib import Path
 from typing import Any
@@ -7,6 +7,7 @@ import pytest
 import yaml
 
 ROOT = Path(__file__).parents[1]
+CASE_FILES = [ROOT / "evals" / "questions.yaml", ROOT / "evals" / "questions_test_sets.yaml"]
 REQUIRED_FIELDS = {
     "numeric": {"value", "tolerance"},
     "contains": {"terms"},
@@ -16,10 +17,12 @@ REQUIRED_FIELDS = {
 
 
 def _cases() -> list[dict[str, Any]]:
-    return yaml.safe_load((ROOT / "evals" / "questions.yaml").read_text(encoding="utf-8"))
+    return [
+        case for path in CASE_FILES for case in yaml.safe_load(path.read_text(encoding="utf-8"))
+    ]
 
 
-def test_case_ids_are_unique() -> None:
+def test_case_ids_are_unique_across_files() -> None:
     ids = [case["id"] for case in _cases()]
     assert len(ids) == len(set(ids))
 

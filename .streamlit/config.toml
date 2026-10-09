@@ -1,7 +1,6 @@
 [server]
-# Solo conexiones desde este equipo: la app ejecuta código generado por el modelo.
-address = "localhost"
 # Límite de subida en MB. Streamlit rechaza archivos mayores antes de que lleguen a la app.
+# Para uso local, limita Streamlit a localhost en tu configuración de usuario (ver README).
 maxUploadSize = 50
 
 [browser]

@@ -60,6 +60,18 @@ python -m data_analyst_agent.cli data/sample/ventas.csv
 streamlit run app/streamlit_app.py
 ```
 
+> **Para uso local, limita Streamlit a localhost.** La app ejecuta código generado por el
+> modelo; si escucha en todas las interfaces, cualquiera en tu red podría usarla. Crea
+> `~/.streamlit/config.toml` (en Windows, `C:\Users\<usuario>\.streamlit\config.toml`) con:
+>
+> ```toml
+> [server]
+> address = "localhost"
+> ```
+>
+> No va en el `.streamlit/config.toml` del repositorio porque ese archivo también lo usa el
+> despliegue en Streamlit Cloud.
+
 ## Privacidad
 
 - **Qué se envía al proveedor del modelo (Groq o Gemini):** tu pregunta, los nombres y tipos
@@ -78,6 +90,15 @@ streamlit run app/streamlit_app.py
 | Modelo | Acierto | Iteraciones promedio |
 |---|---|---|
 | — | — | — |
+
+Casos en `evals/questions.yaml` (dataset de ventas) y `evals/questions_test_sets.yaml`
+(datasets sintéticos de `data/test_sets/`, que reproducen problemas de datos reales: fechas
+dd/mm/aaaa, nulos, duplicados, precios como texto, Excel con unidades en las columnas).
+
+**Fallo conocido:** `data/test_sets/ventas_excel_colombia.csv` (exportado desde Excel en
+Colombia: separador `;`, coma decimal, punto de miles y codificación Windows cp1252) hoy no
+se puede cargar (`UnicodeDecodeError`). Sus casos `t-vco-*` fallarán hasta que la carga de
+archivos detecte codificación, separador y decimal.
 
 ## Hoja de ruta
 

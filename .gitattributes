@@ -1,1 +1,3 @@
 * text=auto eol=lf
+# Datasets de prueba: se guardan byte a byte (incluidos sus fines de línea CRLF de Windows).
+data/test_sets/** -text

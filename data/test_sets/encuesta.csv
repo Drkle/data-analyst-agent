@@ -1,0 +1,351 @@
+respuesta_id,fecha,canal,rango_edad,puntuacion,recomendaria,comentario
+1,2025-09-16,App,35-44,5,Sí,Todo perfecto
+2,2025-10-13,Web,18-24,2,No,"La app se cierra, a veces, al pagar"
+3,2025-09-27,Tienda física,55+,2,No,"El envío tardó, pero el producto ""llegó bien"""
+4,2025-09-22,Web,35-44,3,No,Todo perfecto
+5,2025-09-07,App,18-24,,No,"La app se cierra, a veces, al pagar"
+6,2025-10-17,App,45-54,3,No,Todo perfecto
+7,2025-09-30,Web,25-34,2,No,"Muy buena atención, volvería"
+8,2025-10-15,Web,55+,,No,"Precios altos, calidad regular"
+9,2025-09-18,App,55+,4,Sí,"La app se cierra, a veces, al pagar"
+10,2025-09-08,Tienda física,55+,5,Sí,
+11,2025-09-10,Web,45-54,2,No,"La app se cierra, a veces, al pagar"
+12,2025-10-20,App,55+,2,No,"Precios altos, calidad regular"
+13,2025-10-11,App,35-44,4,Sí,"Muy buena atención, volvería"
+14,2025-09-06,App,55+,4,Sí,"Precios altos, calidad regular"
+15,2025-09-12,App,25-34,4,Sí,"El envío tardó, pero el producto ""llegó bien"""
+16,2025-09-20,App,45-54,5,Sí,"La app se cierra, a veces, al pagar"
+17,2025-10-06,App,55+,3,No,"El envío tardó, pero el producto ""llegó bien"""
+18,2025-10-30,Tienda física,25-34,2,No,
+19,2025-10-15,App,45-54,4,Sí,"Muy buena atención, volvería"
+20,2025-10-10,App,35-44,5,Sí,
+21,2025-09-20,Web,55+,4,Sí,"El envío tardó, pero el producto ""llegó bien"""
+22,2025-10-23,Web,18-24,3,No,
+23,2025-10-28,Tienda física,35-44,2,No,
+24,2025-10-27,Web,35-44,4,Sí,"El envío tardó, pero el producto ""llegó bien"""
+25,2025-10-19,App,35-44,5,Sí,
+26,2025-09-17,Tienda física,25-34,5,Sí,
+27,2025-09-03,Web,45-54,3,No,"El envío tardó, pero el producto ""llegó bien"""
+28,2025-10-19,App,35-44,5,Sí,"La app se cierra, a veces, al pagar"
+29,2025-09-25,Web,55+,2,No,"Muy buena atención, volvería"
+30,2025-09-23,App,45-54,3,No,"El envío tardó, pero el producto ""llegó bien"""
+31,2025-10-17,Tienda física,55+,3,No,"Muy buena atención, volvería"
+32,2025-09-04,Tienda física,18-24,3,No,"La app se cierra, a veces, al pagar"
+33,2025-09-03,Tienda física,45-54,2,No,"El envío tardó, pero el producto ""llegó bien"""
+34,2025-09-07,App,55+,3,No,
+35,2025-09-14,App,45-54,,No,Todo perfecto
+36,2025-09-08,Web,18-24,3,No,"La app se cierra, a veces, al pagar"
+37,2025-10-09,Web,18-24,4,Sí,"Precios altos, calidad regular"
+38,2025-10-09,App,35-44,4,Sí,"La app se cierra, a veces, al pagar"
+39,2025-10-15,Web,55+,4,Sí,
+40,2025-10-10,Tienda física,25-34,5,Sí,
+41,2025-10-03,Web,35-44,4,Sí,"Muy buena atención, volvería"
+42,2025-10-22,App,18-24,4,Sí,
+43,2025-10-16,App,35-44,4,Sí,Todo perfecto
+44,2025-09-19,App,35-44,4,Sí,"La app se cierra, a veces, al pagar"
+45,2025-09-13,Tienda física,25-34,4,Sí,
+46,2025-10-17,Web,25-34,3,No,"Muy buena atención, volvería"
+47,2025-09-26,Tienda física,45-54,4,Sí,Todo perfecto
+48,2025-09-17,Tienda física,18-24,5,Sí,"El envío tardó, pero el producto ""llegó bien"""
+49,2025-09-17,App,45-54,5,Sí,"Precios altos, calidad regular"
+50,2025-09-20,App,55+,3,No,"Muy buena atención, volvería"
+51,2025-09-05,Web,18-24,2,No,Todo perfecto
+52,2025-10-11,Tienda física,25-34,3,No,"Precios altos, calidad regular"
+53,2025-09-26,Web,35-44,4,,"Muy buena atención, volvería"
+54,2025-09-24,Web,55+,4,Sí,"Muy buena atención, volvería"
+55,2025-09-10,App,55+,4,Sí,"Precios altos, calidad regular"
+56,2025-10-31,Tienda física,45-54,3,No,Todo perfecto
+57,2025-10-15,Tienda física,18-24,5,Sí,Todo perfecto
+58,2025-09-20,App,25-34,3,No,
+59,2025-09-10,Web,35-44,5,Sí,"Precios altos, calidad regular"
+60,2025-09-15,App,18-24,5,Sí,
+61,2025-09-28,App,35-44,3,No,
+62,2025-10-24,Tienda física,55+,,No,"Muy buena atención, volvería"
+63,2025-10-19,Tienda física,18-24,3,No,"El envío tardó, pero el producto ""llegó bien"""
+64,2025-10-24,App,18-24,3,No,"La app se cierra, a veces, al pagar"
+65,2025-09-29,Tienda física,45-54,1,No,"Muy buena atención, volvería"
+66,2025-09-10,App,45-54,2,No,"Muy buena atención, volvería"
+67,2025-09-14,Tienda física,55+,4,Sí,
+68,2025-09-21,App,35-44,4,Sí,
+69,2025-09-06,Web,25-34,,No,Todo perfecto
+70,2025-10-02,App,35-44,3,No,"Muy buena atención, volvería"
+71,2025-09-01,Tienda física,25-34,3,No,"La app se cierra, a veces, al pagar"
+72,2025-09-05,App,18-24,4,Sí,"Muy buena atención, volvería"
+73,2025-10-11,Web,55+,2,No,Todo perfecto
+74,2025-09-23,Web,35-44,2,No,"El envío tardó, pero el producto ""llegó bien"""
+75,2025-10-28,Tienda física,25-34,4,Sí,
+76,2025-10-17,Web,18-24,4,Sí,"Muy buena atención, volvería"
+77,2025-09-18,Web,25-34,3,No,"Muy buena atención, volvería"
+78,2025-10-17,Tienda física,45-54,3,No,Todo perfecto
+79,2025-10-09,Tienda física,18-24,4,Sí,"Muy buena atención, volvería"
+80,2025-09-10,Tienda física,45-54,5,Sí,"El envío tardó, pero el producto ""llegó bien"""
+81,2025-10-06,Tienda física,25-34,2,No,
+82,2025-09-19,App,18-24,5,Sí,"La app se cierra, a veces, al pagar"
+83,2025-09-04,App,35-44,5,Sí,"El envío tardó, pero el producto ""llegó bien"""
+84,2025-09-17,App,35-44,4,Sí,
+85,2025-09-14,App,45-54,,No,"La app se cierra, a veces, al pagar"
+86,2025-10-12,Web,18-24,1,,"Precios altos, calidad regular"
+87,2025-09-26,Web,55+,5,Sí,"Muy buena atención, volvería"
+88,2025-09-09,App,45-54,4,Sí,"Precios altos, calidad regular"
+89,2025-09-28,App,45-54,2,No,"El envío tardó, pero el producto ""llegó bien"""
+90,2025-10-31,Tienda física,18-24,4,Sí,
+91,2025-10-15,App,18-24,5,Sí,Todo perfecto
+92,2025-09-08,App,18-24,5,Sí,"El envío tardó, pero el producto ""llegó bien"""
+93,2025-09-14,Web,45-54,5,Sí,Todo perfecto
+94,2025-10-03,Web,25-34,4,Sí,
+95,2025-10-03,Web,45-54,3,,"El envío tardó, pero el producto ""llegó bien"""
+96,2025-10-13,App,55+,4,Sí,"La app se cierra, a veces, al pagar"
+97,2025-09-20,Tienda física,55+,3,No,"Precios altos, calidad regular"
+98,2025-10-28,Web,55+,4,Sí,"Muy buena atención, volvería"
+99,2025-09-20,Web,45-54,3,No,"Precios altos, calidad regular"
+100,2025-10-08,App,35-44,4,Sí,"El envío tardó, pero el producto ""llegó bien"""
+101,2025-10-03,Web,25-34,4,,"El envío tardó, pero el producto ""llegó bien"""
+102,2025-10-23,Web,45-54,4,Sí,"La app se cierra, a veces, al pagar"
+103,2025-09-22,Tienda física,35-44,5,Sí,"La app se cierra, a veces, al pagar"
+104,2025-10-03,Web,25-34,5,Sí,"Muy buena atención, volvería"
+105,2025-10-22,App,35-44,3,No,"La app se cierra, a veces, al pagar"
+106,2025-09-14,Tienda física,18-24,3,No,
+107,2025-10-01,Tienda física,18-24,2,No,Todo perfecto
+108,2025-09-26,Tienda física,55+,2,No,
+109,2025-09-15,App,55+,5,Sí,"Precios altos, calidad regular"
+110,2025-10-08,Web,18-24,3,No,"La app se cierra, a veces, al pagar"
+111,2025-09-02,Web,18-24,3,No,"Muy buena atención, volvería"
+112,2025-10-03,App,45-54,4,Sí,"La app se cierra, a veces, al pagar"
+113,2025-10-27,App,35-44,5,Sí,"La app se cierra, a veces, al pagar"
+114,2025-10-18,Web,55+,3,No,Todo perfecto
+115,2025-10-10,Web,55+,3,No,"El envío tardó, pero el producto ""llegó bien"""
+116,2025-10-03,Web,18-24,4,,"La app se cierra, a veces, al pagar"
+117,2025-10-26,Web,35-44,,No,"Precios altos, calidad regular"
+118,2025-09-24,Web,55+,4,,"Precios altos, calidad regular"
+119,2025-09-11,Web,18-24,5,Sí,"La app se cierra, a veces, al pagar"
+120,2025-10-02,Tienda física,45-54,2,No,"Precios altos, calidad regular"
+121,2025-10-05,App,25-34,4,Sí,"Muy buena atención, volvería"
+122,2025-10-02,Tienda física,18-24,3,No,"La app se cierra, a veces, al pagar"
+123,2025-10-12,App,45-54,5,Sí,"El envío tardó, pero el producto ""llegó bien"""
+124,2025-09-01,Web,35-44,4,Sí,"Precios altos, calidad regular"
+125,2025-09-16,Tienda física,25-34,2,No,Todo perfecto
+126,2025-09-21,App,25-34,5,,"El envío tardó, pero el producto ""llegó bien"""
+127,2025-10-09,Tienda física,45-54,2,No,"Precios altos, calidad regular"
+128,2025-10-05,Web,25-34,5,Sí,"El envío tardó, pero el producto ""llegó bien"""
+129,2025-10-27,Tienda física,55+,3,No,"La app se cierra, a veces, al pagar"
+130,2025-10-14,App,25-34,3,No,"Precios altos, calidad regular"
+131,2025-09-24,Web,18-24,2,,Todo perfecto
+132,2025-09-27,Web,25-34,3,No,"Precios altos, calidad regular"
+133,2025-10-23,Web,18-24,4,Sí,"La app se cierra, a veces, al pagar"
+134,2025-10-16,Web,18-24,3,No,"La app se cierra, a veces, al pagar"
+135,2025-09-03,Web,55+,4,Sí,"Muy buena atención, volvería"
+136,2025-10-01,Web,25-34,2,No,"La app se cierra, a veces, al pagar"
+137,2025-09-16,App,55+,4,,Todo perfecto
+138,2025-09-23,Web,25-34,4,Sí,"La app se cierra, a veces, al pagar"
+139,2025-10-23,Web,55+,2,No,"La app se cierra, a veces, al pagar"
+140,2025-09-15,Web,45-54,4,Sí,
+141,2025-09-28,Web,18-24,,No,
+142,2025-10-19,Web,45-54,1,No,"Precios altos, calidad regular"
+143,2025-10-19,Web,18-24,3,No,"Muy buena atención, volvería"
+144,2025-10-27,App,45-54,4,Sí,"Precios altos, calidad regular"
+145,2025-10-13,Web,35-44,,No,"La app se cierra, a veces, al pagar"
+146,2025-10-15,Tienda física,45-54,3,No,
+147,2025-09-25,Tienda física,18-24,5,Sí,"La app se cierra, a veces, al pagar"
+148,2025-09-14,App,55+,5,Sí,"El envío tardó, pero el producto ""llegó bien"""
+149,2025-10-13,Web,18-24,5,Sí,"Muy buena atención, volvería"
+150,2025-10-14,Web,35-44,5,Sí,"La app se cierra, a veces, al pagar"
+151,2025-10-17,App,18-24,4,Sí,"La app se cierra, a veces, al pagar"
+152,2025-10-01,Tienda física,25-34,3,No,Todo perfecto
+153,2025-09-05,Tienda física,55+,4,Sí,"Muy buena atención, volvería"
+154,2025-10-27,App,18-24,,No,Todo perfecto
+155,2025-10-12,Tienda física,18-24,4,Sí,Todo perfecto
+156,2025-09-01,Web,45-54,3,No,"La app se cierra, a veces, al pagar"
+157,2025-09-12,App,25-34,2,No,"Muy buena atención, volvería"
+158,2025-10-18,App,35-44,5,Sí,"La app se cierra, a veces, al pagar"
+159,2025-10-12,Web,45-54,4,Sí,
+160,2025-09-29,App,18-24,3,No,"El envío tardó, pero el producto ""llegó bien"""
+161,2025-09-26,App,45-54,4,Sí,
+162,2025-10-23,Tienda física,35-44,4,Sí,"Muy buena atención, volvería"
+163,2025-10-10,Web,25-34,3,No,"Muy buena atención, volvería"
+164,2025-10-07,Web,55+,4,Sí,
+165,2025-09-11,Web,18-24,4,Sí,"El envío tardó, pero el producto ""llegó bien"""
+166,2025-09-01,Web,45-54,2,No,
+167,2025-10-18,Web,18-24,,,Todo perfecto
+168,2025-10-13,Web,25-34,4,Sí,Todo perfecto
+169,2025-10-27,Tienda física,25-34,4,Sí,"Muy buena atención, volvería"
+170,2025-10-03,Web,55+,5,Sí,Todo perfecto
+171,2025-10-12,App,45-54,2,No,"Precios altos, calidad regular"
+172,2025-09-15,Web,25-34,4,Sí,"Muy buena atención, volvería"
+173,2025-09-29,Web,55+,4,Sí,"Precios altos, calidad regular"
+174,2025-09-08,Web,18-24,5,Sí,"Precios altos, calidad regular"
+175,2025-09-08,App,45-54,5,Sí,Todo perfecto
+176,2025-09-25,Web,18-24,3,No,Todo perfecto
+177,2025-09-06,Web,25-34,3,No,"La app se cierra, a veces, al pagar"
+178,2025-10-05,App,55+,,No,"La app se cierra, a veces, al pagar"
+179,2025-09-16,Web,18-24,4,Sí,
+180,2025-09-30,Tienda física,18-24,2,No,"El envío tardó, pero el producto ""llegó bien"""
+181,2025-10-14,Web,18-24,5,Sí,
+182,2025-09-02,App,45-54,5,Sí,"Muy buena atención, volvería"
+183,2025-09-26,Tienda física,35-44,4,Sí,"Muy buena atención, volvería"
+184,2025-09-10,Web,18-24,1,,
+185,2025-09-07,Web,35-44,3,No,"Muy buena atención, volvería"
+186,2025-10-12,App,35-44,5,Sí,
+187,2025-09-29,App,18-24,3,No,"El envío tardó, pero el producto ""llegó bien"""
+188,2025-10-04,Web,25-34,3,No,"El envío tardó, pero el producto ""llegó bien"""
+189,2025-10-17,Web,35-44,3,No,"Muy buena atención, volvería"
+190,2025-10-16,App,25-34,5,Sí,"La app se cierra, a veces, al pagar"
+191,2025-09-06,App,35-44,4,Sí,"Muy buena atención, volvería"
+192,2025-09-26,Web,18-24,,No,"La app se cierra, a veces, al pagar"
+193,2025-10-02,App,35-44,4,Sí,"El envío tardó, pero el producto ""llegó bien"""
+194,2025-09-16,Tienda física,35-44,3,No,"El envío tardó, pero el producto ""llegó bien"""
+195,2025-10-04,App,55+,4,Sí,"Muy buena atención, volvería"
+196,2025-10-19,Web,45-54,4,,"La app se cierra, a veces, al pagar"
+197,2025-10-14,App,45-54,4,Sí,"El envío tardó, pero el producto ""llegó bien"""
+198,2025-09-14,App,35-44,5,Sí,"Precios altos, calidad regular"
+199,2025-10-09,Web,55+,2,No,Todo perfecto
+200,2025-09-04,Tienda física,18-24,4,Sí,"Precios altos, calidad regular"
+201,2025-09-12,Web,45-54,3,No,"Muy buena atención, volvería"
+202,2025-09-23,App,55+,5,Sí,"Muy buena atención, volvería"
+203,2025-10-03,App,45-54,,No,Todo perfecto
+204,2025-09-28,Tienda física,55+,4,Sí,Todo perfecto
+205,2025-09-15,App,55+,5,Sí,"La app se cierra, a veces, al pagar"
+206,2025-09-13,Tienda física,35-44,3,No,Todo perfecto
+207,2025-09-21,App,55+,4,Sí,"Muy buena atención, volvería"
+208,2025-10-29,Web,25-34,3,No,Todo perfecto
+209,2025-09-27,Tienda física,25-34,3,No,"El envío tardó, pero el producto ""llegó bien"""
+210,2025-09-15,Tienda física,18-24,2,No,"Muy buena atención, volvería"
+211,2025-10-09,App,18-24,4,Sí,"El envío tardó, pero el producto ""llegó bien"""
+212,2025-09-08,Tienda física,18-24,3,,"La app se cierra, a veces, al pagar"
+213,2025-09-05,App,18-24,3,No,"Precios altos, calidad regular"
+214,2025-10-11,Tienda física,25-34,3,No,"El envío tardó, pero el producto ""llegó bien"""
+215,2025-09-01,Web,25-34,2,No,"Precios altos, calidad regular"
+216,2025-09-09,Tienda física,18-24,5,Sí,"El envío tardó, pero el producto ""llegó bien"""
+217,2025-09-18,Tienda física,35-44,4,Sí,Todo perfecto
+218,2025-09-18,Tienda física,55+,5,Sí,Todo perfecto
+219,2025-10-07,Web,18-24,3,No,Todo perfecto
+220,2025-09-26,App,45-54,3,No,"El envío tardó, pero el producto ""llegó bien"""
+221,2025-10-09,Tienda física,55+,4,Sí,"Precios altos, calidad regular"
+222,2025-09-17,App,25-34,,No,
+223,2025-09-13,Web,25-34,4,Sí,Todo perfecto
+224,2025-10-10,Web,35-44,3,No,Todo perfecto
+225,2025-09-06,Tienda física,25-34,3,No,
+226,2025-09-09,App,18-24,4,Sí,"La app se cierra, a veces, al pagar"
+227,2025-10-01,Web,55+,,No,
+228,2025-10-10,Web,55+,5,Sí,"Precios altos, calidad regular"
+229,2025-10-02,App,55+,5,Sí,"Precios altos, calidad regular"
+230,2025-09-08,Web,35-44,2,No,"Precios altos, calidad regular"
+231,2025-10-25,App,55+,5,Sí,"Precios altos, calidad regular"
+232,2025-10-06,App,45-54,3,No,"El envío tardó, pero el producto ""llegó bien"""
+233,2025-10-07,Web,45-54,4,Sí,"Precios altos, calidad regular"
+234,2025-10-30,Web,18-24,2,No,"El envío tardó, pero el producto ""llegó bien"""
+235,2025-10-15,Tienda física,18-24,2,No,"La app se cierra, a veces, al pagar"
+236,2025-10-19,Web,35-44,5,,"Precios altos, calidad regular"
+237,2025-09-07,Web,18-24,,No,"El envío tardó, pero el producto ""llegó bien"""
+238,2025-10-28,Tienda física,45-54,3,No,"La app se cierra, a veces, al pagar"
+239,2025-10-25,App,45-54,3,No,"La app se cierra, a veces, al pagar"
+240,2025-10-04,App,25-34,4,Sí,Todo perfecto
+241,2025-10-05,Tienda física,35-44,5,Sí,"Muy buena atención, volvería"
+242,2025-09-10,Web,18-24,2,No,"La app se cierra, a veces, al pagar"
+243,2025-09-19,Web,35-44,2,No,"La app se cierra, a veces, al pagar"
+244,2025-09-23,Tienda física,35-44,4,Sí,"Muy buena atención, volvería"
+245,2025-09-28,App,18-24,2,No,
+246,2025-10-18,Web,55+,3,No,"El envío tardó, pero el producto ""llegó bien"""
+247,2025-10-23,App,35-44,5,,Todo perfecto
+248,2025-09-09,Web,35-44,,No,"Muy buena atención, volvería"
+249,2025-10-05,Web,45-54,3,No,"La app se cierra, a veces, al pagar"
+250,2025-10-11,App,55+,3,No,
+251,2025-09-05,Tienda física,35-44,2,No,"La app se cierra, a veces, al pagar"
+252,2025-09-20,Web,35-44,3,No,"Muy buena atención, volvería"
+253,2025-10-26,Web,45-54,4,Sí,"El envío tardó, pero el producto ""llegó bien"""
+254,2025-10-26,Web,55+,5,Sí,Todo perfecto
+255,2025-10-15,Web,25-34,5,Sí,"Muy buena atención, volvería"
+256,2025-09-22,App,18-24,3,No,"La app se cierra, a veces, al pagar"
+257,2025-09-15,App,45-54,3,No,
+258,2025-09-20,App,45-54,5,Sí,"El envío tardó, pero el producto ""llegó bien"""
+259,2025-10-04,Tienda física,18-24,1,No,"Muy buena atención, volvería"
+260,2025-09-17,App,35-44,4,Sí,
+261,2025-09-26,App,35-44,,No,
+262,2025-10-03,App,25-34,,No,
+263,2025-10-14,App,18-24,3,No,"Precios altos, calidad regular"
+264,2025-10-29,App,55+,4,Sí,"El envío tardó, pero el producto ""llegó bien"""
+265,2025-09-04,Tienda física,45-54,2,No,"La app se cierra, a veces, al pagar"
+266,2025-10-03,Web,18-24,3,No,"Muy buena atención, volvería"
+267,2025-10-06,App,18-24,3,No,"El envío tardó, pero el producto ""llegó bien"""
+268,2025-10-16,Web,35-44,4,Sí,Todo perfecto
+269,2025-09-10,Web,55+,2,No,"Muy buena atención, volvería"
+270,2025-10-02,Tienda física,25-34,4,Sí,Todo perfecto
+271,2025-09-08,App,25-34,,No,"Muy buena atención, volvería"
+272,2025-09-06,App,55+,4,Sí,Todo perfecto
+273,2025-09-16,Web,45-54,3,No,"Muy buena atención, volvería"
+274,2025-10-06,App,45-54,3,No,Todo perfecto
+275,2025-09-28,Web,25-34,3,No,
+276,2025-10-07,App,25-34,5,Sí,
+277,2025-09-29,Tienda física,18-24,3,No,"Precios altos, calidad regular"
+278,2025-10-07,App,18-24,4,Sí,"La app se cierra, a veces, al pagar"
+279,2025-10-10,App,35-44,5,Sí,
+280,2025-09-19,App,18-24,3,No,"El envío tardó, pero el producto ""llegó bien"""
+281,2025-09-12,Web,35-44,4,Sí,"Precios altos, calidad regular"
+282,2025-09-17,Tienda física,18-24,3,No,"La app se cierra, a veces, al pagar"
+283,2025-10-26,Web,45-54,3,No,"Precios altos, calidad regular"
+284,2025-09-21,Web,55+,4,,"Precios altos, calidad regular"
+285,2025-10-28,App,45-54,2,No,"Muy buena atención, volvería"
+286,2025-09-02,Tienda física,55+,4,Sí,
+287,2025-10-21,App,55+,3,No,Todo perfecto
+288,2025-09-10,App,45-54,4,Sí,"Precios altos, calidad regular"
+289,2025-09-06,Web,35-44,5,Sí,"Precios altos, calidad regular"
+290,2025-09-18,Tienda física,35-44,4,Sí,"Muy buena atención, volvería"
+291,2025-09-07,App,35-44,3,No,
+292,2025-10-02,App,35-44,4,Sí,
+293,2025-10-14,App,18-24,4,Sí,"La app se cierra, a veces, al pagar"
+294,2025-10-26,Tienda física,35-44,2,No,"El envío tardó, pero el producto ""llegó bien"""
+295,2025-10-03,Web,18-24,2,No,"El envío tardó, pero el producto ""llegó bien"""
+296,2025-10-13,Web,55+,,,"La app se cierra, a veces, al pagar"
+297,2025-10-12,Web,18-24,4,Sí,"Precios altos, calidad regular"
+298,2025-10-02,Web,18-24,2,No,Todo perfecto
+299,2025-10-27,App,55+,,No,"Muy buena atención, volvería"
+300,2025-10-14,Web,18-24,4,Sí,"La app se cierra, a veces, al pagar"
+301,2025-09-10,Web,18-24,4,Sí,"La app se cierra, a veces, al pagar"
+302,2025-09-28,App,35-44,3,No,"La app se cierra, a veces, al pagar"
+303,2025-10-12,Web,18-24,5,Sí,"Precios altos, calidad regular"
+304,2025-09-03,Tienda física,18-24,2,No,
+305,2025-09-09,Web,35-44,4,Sí,
+306,2025-10-12,Web,55+,5,Sí,"La app se cierra, a veces, al pagar"
+307,2025-09-28,App,55+,2,,"Precios altos, calidad regular"
+308,2025-10-14,Tienda física,18-24,3,No,Todo perfecto
+309,2025-09-16,Web,25-34,4,Sí,"Muy buena atención, volvería"
+310,2025-10-10,Web,55+,4,Sí,"El envío tardó, pero el producto ""llegó bien"""
+311,2025-10-31,Web,18-24,3,No,
+312,2025-10-23,Tienda física,25-34,,,"Precios altos, calidad regular"
+313,2025-09-19,Tienda física,55+,2,No,"El envío tardó, pero el producto ""llegó bien"""
+314,2025-10-18,Web,18-24,4,Sí,"El envío tardó, pero el producto ""llegó bien"""
+315,2025-10-26,Web,18-24,4,Sí,"Muy buena atención, volvería"
+316,2025-10-21,Web,35-44,3,No,"Precios altos, calidad regular"
+317,2025-10-12,Web,55+,3,No,
+318,2025-09-03,App,45-54,3,No,"Precios altos, calidad regular"
+319,2025-10-13,App,55+,4,Sí,
+320,2025-10-31,App,55+,4,Sí,"Precios altos, calidad regular"
+321,2025-09-22,Web,45-54,3,No,"Muy buena atención, volvería"
+322,2025-10-06,App,35-44,4,,"El envío tardó, pero el producto ""llegó bien"""
+323,2025-09-20,Tienda física,55+,2,No,"Muy buena atención, volvería"
+324,2025-10-07,Web,55+,,No,"El envío tardó, pero el producto ""llegó bien"""
+325,2025-09-19,Web,35-44,,No,"El envío tardó, pero el producto ""llegó bien"""
+326,2025-10-08,Web,55+,5,Sí,"El envío tardó, pero el producto ""llegó bien"""
+327,2025-09-27,Tienda física,35-44,2,No,"Muy buena atención, volvería"
+328,2025-09-17,App,55+,3,No,"El envío tardó, pero el producto ""llegó bien"""
+329,2025-10-15,App,25-34,4,Sí,"Muy buena atención, volvería"
+330,2025-09-19,App,25-34,5,Sí,Todo perfecto
+331,2025-10-03,Tienda física,25-34,4,Sí,"Precios altos, calidad regular"
+332,2025-10-24,App,35-44,5,Sí,"Muy buena atención, volvería"
+333,2025-10-26,Web,18-24,3,No,
+334,2025-10-07,Web,18-24,4,Sí,"El envío tardó, pero el producto ""llegó bien"""
+335,2025-10-22,App,35-44,4,Sí,
+336,2025-10-29,Web,25-34,3,No,"El envío tardó, pero el producto ""llegó bien"""
+337,2025-09-16,Tienda física,55+,4,Sí,"La app se cierra, a veces, al pagar"
+338,2025-09-13,Tienda física,25-34,4,Sí,"La app se cierra, a veces, al pagar"
+339,2025-09-16,Web,35-44,4,Sí,Todo perfecto
+340,2025-10-06,App,18-24,4,Sí,"El envío tardó, pero el producto ""llegó bien"""
+341,2025-09-07,App,18-24,,No,"Precios altos, calidad regular"
+342,2025-10-07,App,55+,3,No,"Muy buena atención, volvería"
+343,2025-09-17,Tienda física,35-44,4,Sí,Todo perfecto
+344,2025-09-03,Web,25-34,1,No,"La app se cierra, a veces, al pagar"
+345,2025-09-01,App,55+,3,No,"El envío tardó, pero el producto ""llegó bien"""
+346,2025-10-09,App,18-24,5,Sí,"Precios altos, calidad regular"
+347,2025-09-27,Tienda física,45-54,3,No,Todo perfecto
+348,2025-09-24,Web,18-24,4,Sí,"La app se cierra, a veces, al pagar"
+349,2025-09-23,App,18-24,,No,Todo perfecto
+350,2025-09-27,Web,18-24,5,Sí,"El envío tardó, pero el producto ""llegó bien"""
