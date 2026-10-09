@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
@@ -17,7 +18,12 @@ import pandas as pd
 
 from data_analyst_agent.chart_format import format_figure
 from data_analyst_agent.llm import INVALID_ARGUMENTS_KEY, ToolDefinition
-from data_analyst_agent.sandbox import new_session_dir, run_code
+from data_analyst_agent.sandbox import (
+    MAX_OUTPUT_BYTES,
+    ExecutionResult,
+    new_session_dir,
+    run_code,
+)
 
 MAX_OUTPUT_CHARS = 4000
 MAX_CHART_POINTS = 5000
@@ -135,9 +141,11 @@ class DataTools:
                 f"El archivo pesa {size / 1024 / 1024:.1f} MB y el máximo es "
                 f"{MAX_FILE_BYTES // 1024 // 1024} MB."
             )
-        self.data_path = data_path
         self.timeout = timeout
         self.workdir = workdir if workdir is not None else new_session_dir()
+        self.display_name = data_path.name
+        # El proceso hijo solo recibe una copia dentro de la carpeta de la sesión.
+        self.data_path = _copy_into_workdir(data_path, self.workdir)
         self.max_chart_points = max_chart_points
         self.definitions: list[ToolDefinition] = [INSPECT_DATA, RUN_PYTHON, CREATE_CHART]
 
@@ -163,7 +171,7 @@ class DataTools:
     def inspect_data(self) -> str:
         df = load_dataframe(self.data_path)
         lines = [
-            f"Archivo: {self.data_path.name}",
+            f"Archivo: {self.display_name}",
             f"Filas: {len(df)}, columnas: {len(df.columns)}",
             "",
             "Columnas:",
@@ -186,8 +194,8 @@ class DataTools:
 
     def run_python(self, code: str) -> str:
         result = run_code(code, self.data_path, self.timeout, self.workdir)
-        if result.timed_out:
-            return self._timeout_message()
+        if failure := self._stopped_message(result):
+            return failure
         if not result.ok:
             return truncate(f"Error al ejecutar el código:\n{result.stderr.strip()}")
         output = result.stdout.strip()
@@ -204,8 +212,8 @@ class DataTools:
             chart_path=chart_path,
             max_points=self.max_chart_points,
         )
-        if result.timed_out:
-            return ToolResult(self._timeout_message())
+        if failure := self._stopped_message(result):
+            return ToolResult(failure)
         if result.chart_invalid:
             return ToolResult(f"Error en la gráfica: {result.stderr.strip()}")
         if not result.ok:
@@ -222,5 +230,23 @@ class DataTools:
         )
         return ToolResult(chart.summary(), chart=chart)
 
-    def _timeout_message(self) -> str:
-        return f"Error: el código superó el tiempo máximo de {self.timeout:g} s y se detuvo."
+    def _stopped_message(self, result: ExecutionResult) -> str | None:
+        """Mensaje si el sandbox detuvo el proceso (tiempo o salida excesiva)."""
+        if result.timed_out:
+            return f"Error: el código superó el tiempo máximo de {self.timeout:g} s y se detuvo."
+        if result.output_exceeded:
+            return (
+                f"Error: el código imprimió más de {MAX_OUTPUT_BYTES // 1_000_000} MB y se "
+                "detuvo. Imprime solo lo necesario o agrega los datos antes."
+            )
+        return None
+
+
+def _copy_into_workdir(data_path: Path, workdir: Path) -> Path:
+    """Copia el dataset a la carpeta de la sesión, salvo que ya esté ahí."""
+    workdir.mkdir(parents=True, exist_ok=True)
+    if data_path.resolve().parent == workdir.resolve():
+        return data_path
+    target = workdir / f"datos{data_path.suffix.lower()}"
+    shutil.copyfile(data_path, target)
+    return target
