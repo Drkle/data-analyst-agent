@@ -1,78 +1,16 @@
 # Plan del proyecto: Data Analyst Agent
 
-> Agente de IA que responde preguntas sobre datos tabulares en lenguaje natural, escribiendo y ejecutando su propio código de análisis de forma segura.
+> El analista conversacional para quien usa Excel y Power BI: responde en español sobre
+> archivos de datos, y cada cifra sale de código ejecutado y verificado.
 
 ---
 
-## 1. Problema
+## 1–5. Problema, solución, objetivos, alcance y usuarios
 
-Muchas personas y equipos tienen datos valiosos en archivos CSV y Excel (ventas, inventarios, encuestas, finanzas), pero obtener respuestas de ellos exige saber programar o dominar herramientas como Excel avanzado, SQL o Power BI.
-
-Esto genera tres problemas concretos:
-
-1. **Dependencia de perfiles técnicos.** Una pregunta simple ("¿qué producto vendió más en marzo?") termina en una solicitud al analista de datos y horas o días de espera.
-2. **Análisis superficial.** Quien no programa se queda en filtros y tablas dinámicas básicas; no explora correlaciones, tendencias ni anomalías.
-3. **Riesgo al usar IA "a ciegas".** Pegar datos en un chatbot genérico produce respuestas que suenan bien pero no están calculadas: el modelo puede inventar cifras porque no ejecuta ningún cálculo real.
-
-**El hueco:** falta una herramienta que combine la facilidad del lenguaje natural con la precisión de ejecutar código real sobre los datos, mostrando cómo llegó a cada respuesta.
-
-## 2. Solución propuesta
-
-Un agente que:
-
-- Recibe un archivo de datos y una pregunta en lenguaje natural.
-- Inspecciona la estructura del archivo (columnas, tipos, valores de ejemplo).
-- Escribe código Python (pandas) para responder, **lo ejecuta en un entorno aislado** y lee el resultado.
-- Si el código falla, lee el error y se corrige solo.
-- Devuelve la respuesta con el código usado y, cuando aplica, una gráfica.
-
-La diferencia clave frente a un chatbot genérico: **cada cifra sale de un cálculo ejecutado, no de la memoria del modelo**, y el usuario puede verificar el código.
-
-## 3. Objetivos
-
-### Objetivo general
-
-Construir un agente de análisis de datos basado en LLM, implementado sin frameworks de agentes, que responda preguntas en lenguaje natural sobre archivos tabulares ejecutando código de forma segura y verificable.
-
-### Objetivos específicos
-
-1. Implementar desde cero el ciclo de un agente (razonar → usar herramienta → observar → repetir) y *tool use*, independiente del proveedor del modelo.
-7. Comparar el desempeño de varios modelos (benchmark) con las mismas evaluaciones.
-2. Diseñar herramientas para inspeccionar datos, ejecutar código y generar gráficas.
-3. Ejecutar el código generado en un entorno aislado con límites de tiempo, memoria y acceso al sistema.
-4. Ofrecer una interfaz web de chat donde se suba un archivo y se vean respuestas y gráficas.
-5. Medir la calidad del agente con un conjunto de evaluaciones automáticas (porcentaje de respuestas correctas).
-6. Documentar y desplegar el proyecto con una demo pública.
-
-## 4. Alcance
-
-### Dentro del alcance (v1)
-
-| Área | Incluye |
-|---|---|
-| Datos | Archivos CSV y Excel (.xlsx) de hasta ~50 MB, una tabla a la vez |
-| Preguntas | Agregaciones, filtros, rankings, tendencias temporales, estadística descriptiva, comparaciones |
-| Herramientas del agente | `inspect_data`, `run_python`, `create_chart` |
-| Seguridad | Ejecución aislada, tiempo máximo por ejecución, bloqueo de red y de archivos fuera del área de trabajo |
-| Autocorrección | Reintento automático cuando el código falla (máximo configurable) |
-| Interfaz | CLI para desarrollo + app web en Streamlit |
-| Calidad | Tests unitarios (pytest) + evaluaciones con preguntas de respuesta conocida |
-| Despliegue | Demo pública en Streamlit Community Cloud |
-
-### Fuera del alcance (v1)
-
-- Conexión a bases de datos (SQL, BigQuery, etc.).
-- Varias tablas relacionadas a la vez (joins entre archivos).
-- Modelos de machine learning o predicciones.
-- Usuarios, autenticación o historial persistente.
-- Datos sensibles o de producción: la demo es para datos de ejemplo.
-
-Estos puntos quedan como **trabajo futuro** (sección 10) y muestran hacia dónde puede crecer el proyecto.
-
-## 5. Usuarios objetivo
-
-- **Perfil no técnico** (emprendedor, administrativo, estudiante): quiere respuestas rápidas sin programar.
-- **Analista o desarrollador**: quiere acelerar la exploración inicial de un dataset y ver el código para reutilizarlo.
+Estas secciones se reemplazaron el 9 de octubre de 2026, después de las pruebas con datos
+reales, por **[docs/ALCANCE.md](ALCANCE.md)**: problema, usuario objetivo, propuesta de
+valor, objetivos, alcance por versión (v1 una tabla, v2 modelo de datos, v3 conclusiones),
+restricciones, **metas de calidad** y definición de terminado.
 
 ## 6. Requisitos
 
@@ -166,10 +104,15 @@ Cada fase termina con un *commit* etiquetado y algo funcionando.
 - **Criterio de cierre:** los tests de seguridad pasan (código malicioso de prueba es bloqueado) y el agente se recupera de errores provocados.
 
 ### Fase 4 — Evaluaciones (1 día)
-- 15–20 preguntas con respuesta esperada en `evals/questions.yaml`.
-- Script que ejecuta todas y reporta porcentaje de acierto, iteraciones y tiempo promedio.
+- Casos con respuesta esperada en `evals/` (ventas, datasets con trampas, datos reales y los
+  casos del informe de QA), agrupados en las categorías de [ALCANCE §8](ALCANCE.md).
+- `evals/run_evals.py` ejecuta subconjuntos con repeticiones y reporta acierto, iteraciones y
+  tokens; `scripts/measure_commits.py` compara antes y después de cada cambio.
 - **Benchmark entre modelos:** correr las mismas evaluaciones con distintos proveedores y publicar la tabla comparativa.
-- **Criterio de cierre:** reporte de evaluación reproducible con ≥ 80 % de acierto, publicado en el README.
+- **Criterio de cierre:** se cumplen las seis metas de calidad de [ALCANCE §8](ALCANCE.md)
+  (cálculo directo ≥ 95 %, datos con trampas ≥ 80 %, negativas correctas ≥ 90 %,
+  interpretación y alcance ≥ 70 %, carga de archivos 100 %, seguridad 100 %), medidas con
+  3 repeticiones por caso, y los resultados están publicados en el README.
 
 ### Fase 5 — Presentación y despliegue (1 día)
 - README final con GIF de demo, diagrama y resultados de evaluación.
@@ -182,12 +125,12 @@ Cada fase termina con un *commit* etiquetado y algo funcionando.
 
 | Métrica | Meta |
 |---|---|
-| Acierto en evaluaciones | ≥ 80 % |
-| Tests de seguridad del sandbox | 100 % pasan |
-| Iteraciones promedio por pregunta | ≤ 4 |
+| Metas de calidad por categoría | Ver [ALCANCE §8](ALCANCE.md) (3 repeticiones por caso) |
+| Tests de ataque del sandbox | 100 % pasan |
+| Iteraciones promedio por pregunta | Se reporta, sin meta estricta en v1 |
 | Modelos comparados en el benchmark | ≥ 2 |
 | Costo de desarrollo y demo | $0 |
-| Tiempo de respuesta típico | < 20 s |
+| Tiempo de respuesta típico | Se reporta, sin meta estricta en v1 |
 | Cobertura de tests en `tools` y `sandbox` | ≥ 70 % |
 
 ## 10. Riesgos y mitigaciones
@@ -206,15 +149,17 @@ Cada fase termina con un *commit* etiquetado y algo funcionando.
 
 ## 11. Trabajo futuro (v2+)
 
-- **Modelo de datos para usuarios de Excel y Power BI:** varios archivos relacionados y
-  archivos grandes (millones de filas), probablemente con DuckDB sobre Parquet. La v1 ya
-  guarda cada tabla en `data/<tabla>.parquet` con un catálogo (`data/catalog.json`) para no
-  cerrar esa puerta. Ver el riesgo de DuckDB en la sección 10.
-- Conexión a bases de datos SQL.
-- Varios archivos y joins.
-- Exportar el análisis como notebook o informe PDF.
-- Exponer las herramientas como **servidor MCP** para usarlas desde Claude u otros clientes.
-- Modo multiagente: un agente planifica, otro ejecuta, otro verifica.
+El alcance de cada versión está en [ALCANCE §5](ALCANCE.md), y lo que queda fuera en
+cualquier versión (conectores a sistemas, pronósticos, reportes gobernados) en
+[ALCANCE §6](ALCANCE.md). Notas técnicas para preparar esas versiones:
+
+- **v2, modelo de datos:** varios archivos relacionados y archivos grandes (millones de filas),
+  probablemente con DuckDB sobre Parquet. La v1 ya guarda cada tabla en
+  `data/<tabla>.parquet` con un catálogo (`data/catalog.json`) para no cerrar esa puerta. Ver
+  el riesgo de DuckDB en la sección 10.
+- **v3, conclusiones e informes:** tablero exportable en HTML con varias gráficas.
+- Ideas sin versión asignada: exponer las herramientas como **servidor MCP** y un modo
+  multiagente (uno planifica, otro ejecuta, otro verifica).
 
 ## 12. Qué demuestra este proyecto (para el CV)
 

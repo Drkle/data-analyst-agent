@@ -1,6 +1,7 @@
 # Contexto para Claude Code
 
-Proyecto: agente analista de datos. Ver docs/PLAN.md para problema, alcance y fases.
+Proyecto: agente analista de datos. Ver docs/ALCANCE.md para problema, alcance por versión y
+metas de calidad, y docs/PLAN.md para arquitectura y fases.
 
 Reglas:
 - NO usar frameworks de agentes (LangChain, CrewAI, etc.). El ciclo del agente se escribe a mano.

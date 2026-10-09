@@ -1,6 +1,8 @@
 # 🤖 Data Analyst Agent
 
-> Pregúntale a tus datos en lenguaje natural. Un agente de IA que escribe, ejecuta y corrige su propio código de análisis, y te muestra cómo llegó a cada respuesta.
+> **El analista conversacional para quien usa Excel y Power BI.** Pregúntale a tus archivos
+> en español: el agente escribe y ejecuta el código de análisis, cada cifra sale de un cálculo
+> verificado y, cuando los datos no permiten responder, te lo dice.
 
 ![status](https://img.shields.io/badge/status-en%20desarrollo-yellow)
 ![python](https://img.shields.io/badge/python-3.10%2B-blue)
@@ -11,20 +13,33 @@
 
 ## ¿Qué problema resuelve?
 
-Los chatbots genéricos *suenan* seguros al hablar de tus datos, pero no calculan nada: pueden inventar cifras. Este agente **ejecuta código real** sobre tu archivo, así que cada número de la respuesta sale de un cálculo verificable.
+Quien trabaja con Excel y Power BI dedica horas a **preguntas ad hoc** ("¿por qué cayeron
+las ventas en marzo?", "compárame las regiones"): limpiar el archivo, armar el modelo, escribir
+medidas y diseñar visuales para una pregunta que se hace una sola vez. Los asistentes de IA
+genéricos prometen atajar ese camino, pero en este proyecto medimos sus tres problemas:
+**inventan cifras**, **responden con seguridad lo que los datos no permiten** y **tropiezan con
+los archivos reales** (CSV de Excel en Colombia, códigos con cero inicial, `-999` como "sin
+dato", Excel con varias hojas).
 
-Más detalle en el [plan del proyecto](docs/PLAN.md).
+Este agente es un complemento para esas preguntas, no un reemplazo de los tableros oficiales.
+Su principio: **confiable antes que completo**. Objetivo, usuarios, alcance por versión y metas
+de calidad en [docs/ALCANCE.md](docs/ALCANCE.md); plan técnico en [docs/PLAN.md](docs/PLAN.md).
 
 ## Características
 
-- 💬 Preguntas en lenguaje natural sobre archivos CSV y Excel
-- 🧠 Agente implementado desde cero con *tool use* (sin frameworks)
-- 🔀 Agnóstico al proveedor: Groq, Gemini o Anthropic con una sola variable
-- 💸 Desarrollo y demo con costo $0 usando capas gratuitas
-- 🔒 Ejecución de código aislada, con timeout y sin acceso a red
-- 🔁 Autocorrección: si el código falla, lee el error y reintenta
-- 📊 Gráficas generadas automáticamente
-- ✅ Evaluaciones automáticas de calidad
+- 💬 Preguntas en español sobre archivos CSV y Excel, con respuestas en formato colombiano
+- 🔢 **Cada cifra sale de código ejecutado:** un verificador rechaza cifras que no salen de un
+  cálculo que terminó bien, y el código de cada paso es visible
+- 🙅 **Honesto con los límites de los datos:** dice "no se puede" cuando falta el dato, advierte
+  el alcance del dataset y no pronostica
+- 📂 **Entiende los archivos tal como llegan:** detecta codificación, separador y decimal,
+  conserva los códigos con cero inicial y avisa de problemas de calidad sin modificar los datos
+- 📊 Gráficas interactivas con Plotly
+- 🧠 Agente implementado desde cero con *tool use* (sin frameworks), agnóstico al proveedor
+- 🔒 Código ejecutado en un proceso aislado, sin credenciales; bloqueo de archivos, red y
+  procesos con seccomp en Linux (en curso)
+- 💸 Costo $0 con la capa gratuita de Groq
+- ✅ Evaluaciones automáticas con metas por categoría y comparación antes/después
 
 ## Arquitectura
 
@@ -86,10 +101,18 @@ streamlit run app/streamlit_app.py
 
 ## Evaluaciones
 
-<!-- TODO (Fase 4): publicar resultados -->
-| Modelo | Acierto | Iteraciones promedio |
+Metas de calidad de la v1 ([ALCANCE §8](docs/ALCANCE.md)), medidas con **3 repeticiones por
+caso**; son el criterio de cierre de la Fase 4. Los errores de llamada (cupo, red) no cuentan.
+
+<!-- TODO (Fase 4): completar la columna de resultados -->
+| Categoría | Meta v1 | Resultado |
 |---|---|---|
-| — | — | — |
+| Cálculo directo | ≥ 95 % | — |
+| Datos con trampas | ≥ 80 % | — |
+| Negativas correctas | ≥ 90 % | — |
+| Interpretación y alcance | ≥ 70 % | — |
+| Carga de archivos | 100 % | — |
+| Seguridad | 100 % | — |
 
 Casos en `evals/questions.yaml` (dataset de ventas) y `evals/questions_test_sets.yaml`
 (datasets sintéticos de `data/test_sets/`, que reproducen problemas de datos reales: fechas
@@ -105,12 +128,30 @@ día: `scripts/measure_commits.py`.
 
 ## Hoja de ruta
 
+Alcance de cada versión en [ALCANCE §5](docs/ALCANCE.md); fases de la v1 en
+[PLAN §8](docs/PLAN.md).
+
+### v1 — Analista confiable de una tabla *(en curso)*
+
 - [x] Fase 0 — Preparación
 - [x] Fase 1 — Núcleo del agente
 - [x] Fase 2 — Gráficas e interfaz web
-- [ ] Fase 3 — Robustez y seguridad
-- [ ] Fase 4 — Evaluaciones
-- [ ] Fase 5 — Demo pública
+- [ ] Fase 3 — Robustez y seguridad *(hechas: capa 0 del sandbox y entregas A–E del QA;
+  falta la capa 2 con seccomp y los tests de ataque)*
+- [ ] Fase 4 — Evaluaciones: las seis metas de calidad, con 3 repeticiones
+- [ ] Fase 5 — Demo pública en Streamlit Community Cloud, con datasets precargados y cupo
+  por visitante
+
+### v2 — Modelo de datos
+
+- [ ] Varios archivos por sesión, con relaciones que el usuario confirma
+- [ ] DuckDB sobre Parquet para archivos de millones de filas
+- [ ] Medidas tipo DAX (acumulado del año, variación interanual, participación)
+
+### v3 — Conclusiones e informes
+
+- [ ] Modo "conclusiones": hallazgos verificados a partir de varias preguntas
+- [ ] Tablero exportable en HTML con KPI y varias gráficas
 
 ### Registro de avances
 
