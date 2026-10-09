@@ -45,37 +45,75 @@ def main(argv: list[str] | None = None) -> int:
     # Las claves se cargan en el entorno de este proceso y las heredan las corridas; nunca se
     # muestran ni se copian al worktree.
     load_dotenv(ROOT / ".env")
-    outputs = {}
-    for side, revision in (("antes", args.before), ("despues", args.after)):
-        tree = _worktree(f"{args.label}-{side}", revision)
-        output = RESULTS_DIR / f"{args.label}-{side}.jsonl"
-        outputs[side] = output
-        command = [sys.executable, "-X", "utf8", str(tree / "evals" / "run_evals.py"), *selection]
-        if args.dry_run:
-            command.append("--list")
-        else:
-            RESULTS_DIR.mkdir(parents=True, exist_ok=True)
-            mode = "--resume" if output.exists() else "--output"
-            command += ["--repeat", str(args.repeat), mode, str(output)]
-        print(f"\n=== {side}: {revision} ({_short(revision)}) ===", flush=True)
-        env = {**os.environ, "PYTHONPATH": str(tree / "src")}  # el código de ese commit
-        code = subprocess.run(command, cwd=tree, env=env, check=False).returncode
-        if code == 2:
-            print("\nCorrida cortada (por ejemplo, por cupo). Vuelve a ejecutar el mismo comando")
-            print("más tarde: retomará sin repetir los casos ya terminados.")
-            return 2
-        if code != 0:
-            print(f"\nLa corrida de '{side}' terminó con código {code}.")
-            return code
+    sides = {
+        side: (_worktree(f"{args.label}-{side}", revision), revision)
+        for side, revision in (("antes", args.before), ("despues", args.after))
+    }
+    for side, (_, revision) in sides.items():
+        print(f"{side}: {_short(revision)}")
 
-    if not args.dry_run:
-        print("\n=== Comparación ===", flush=True)
-        compare = [sys.executable, "-X", "utf8", str(ROOT / "evals" / "run_evals.py"), "--compare"]
-        subprocess.run([*compare, str(outputs["antes"]), str(outputs["despues"])], check=False)
+    case_ids = _case_ids(sides["despues"][0], selection)
+    print(f"{len(case_ids)} casos: {', '.join(case_ids)}")
+    if args.dry_run:
+        return _finish(args)
+
+    # Intercalado: por cada repetición y caso, primero antes y luego después. Si la corrida se
+    # corta, lo ya medido sigue siendo pares comparables.
+    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+    outputs = {side: RESULTS_DIR / f"{args.label}-{side}.jsonl" for side in sides}
+    for repetition in range(1, args.repeat + 1):
+        for case_id in case_ids:
+            for side, (tree, _) in sides.items():
+                print(f"\n--- {case_id} #{repetition} · {side} ---", flush=True)
+                # --resume salta lo ya terminado: con --repeat N solo corre la repetición N.
+                command = [
+                    *_runner(tree),
+                    "--ids", case_id, "--repeat", str(repetition),
+                    "--resume", str(outputs[side]),
+                ]  # fmt: skip
+                code = subprocess.run(command, cwd=tree, env=_env(tree), check=False).returncode
+                if code == 2:
+                    print("\nCorrida cortada (por ejemplo, por cupo). Vuelve a ejecutar el mismo")
+                    print("comando más tarde: retomará sin repetir los casos ya terminados.")
+                    return 2
+                if code != 0:
+                    print(f"\nLa corrida de '{side}' terminó con código {code}.")
+                    return code
+
+    print("\n=== Comparación ===", flush=True)
+    compare = [*_runner(ROOT), "--compare", str(outputs["antes"]), str(outputs["despues"])]
+    subprocess.run(compare, check=False)
+    return _finish(args)
+
+
+def _finish(args: argparse.Namespace) -> int:
     if not args.keep:
         for side in ("antes", "despues"):
             _remove_worktree(WORKTREES / f"{args.label}-{side}")
     return 0
+
+
+def _runner(tree: Path) -> list[str]:
+    return [sys.executable, "-X", "utf8", str(tree / "evals" / "run_evals.py")]
+
+
+def _env(tree: Path) -> dict[str, str]:
+    return {**os.environ, "PYTHONPATH": str(tree / "src")}  # el código de ese commit
+
+
+def _case_ids(tree: Path, selection: list[str]) -> list[str]:
+    """Ids elegidos por la selección, según los casos del commit de después."""
+    listing = subprocess.run(
+        [*_runner(tree), *selection, "--list"],
+        cwd=tree,
+        env=_env(tree),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        check=True,
+    ).stdout
+    lines = listing.split("\n\n")[0].splitlines()
+    return [line.split()[0] for line in lines if line.strip()]
 
 
 def _worktree(name: str, revision: str) -> Path:
