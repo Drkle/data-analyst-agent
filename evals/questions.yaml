@@ -4,6 +4,7 @@
 #   numeric:        la respuesta contiene `value` (± `tolerance`), aceptando formatos como
 #                   275 858,67 · 275.858,67 · 275858.67
 #   contains:       aparecen todos los `terms` (sin distinguir mayúsculas ni tildes)
+#   excludes:       no aparece ninguno de los `terms` (sin distinguir mayúsculas ni tildes)
 #   not_computable: la respuesta dice que no se puede calcular (al menos una de `refusal_any`),
 #                   menciona todo lo de `mentions_all` y no contiene nada de `must_not_contain`
 
@@ -90,3 +91,13 @@
     - {type: numeric, value: 55761.56, tolerance: 0.01}  # octubre
     - {type: numeric, value: 76988.06, tolerance: 0.01}  # noviembre
     - {type: numeric, value: 105867.73, tolerance: 0.01}  # diciembre
+
+- id: q09
+  dataset: data/sample/ventas.csv
+  # El modelo llegó a responder "93 unidades": 93 es el número de ventas (filas); las
+  # unidades vendidas en el Norte son 897.
+  question: "¿Cuántas ventas hubo en la región Norte?"
+  checks:
+    - {type: numeric, value: 93, tolerance: 0}
+    - {type: contains, terms: [ventas]}
+    - {type: excludes, terms: [93 unidades]}

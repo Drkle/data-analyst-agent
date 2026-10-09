@@ -10,6 +10,7 @@ ROOT = Path(__file__).parents[1]
 REQUIRED_FIELDS = {
     "numeric": {"value", "tolerance"},
     "contains": {"terms"},
+    "excludes": {"terms"},
     "not_computable": {"refusal_any", "mentions_all", "must_not_contain"},
 }
 
