@@ -11,7 +11,7 @@ El turno en curso siempre va completo.
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from data_analyst_agent.llm import Message
 
@@ -26,6 +26,8 @@ class Turn:
     question: str
     messages: list[Message]  # empieza por la pregunta del usuario
     answer: str
+    # Salidas de código que terminó bien: lo único que respalda cifras ante el verificador.
+    evidence: list[str] = field(default_factory=list)
 
     def compact(self) -> list[Message]:
         return [

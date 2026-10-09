@@ -74,10 +74,12 @@ def _print_result(result: AgentResult, verbose: bool, charts_dir: Path) -> None:
         print(f"\nGráfica {index} ({chart.kind}, {chart.points} puntos): {path.resolve()}")
     print(f"\n{result.answer}")
     verification = result.verification
+    if verification.last_execution_failed:
+        print("\n⚠️ La última ejecución de código falló: las cifras pueden no venir de un cálculo.")
     if verification.unverified:
-        print(f"\n⚠️ Cifras sin verificar con código: {', '.join(verification.unverified)}")
-    elif verification.checked:
-        print("\n✓ Cifras verificadas contra el código ejecutado")
+        print(f"\n⚠️ Cifras que no salen de ningún cálculo: {', '.join(verification.unverified)}")
+    elif verification.checked and not verification.last_execution_failed:
+        print("\n✓ Cifras calculadas con código")
     summary = f"{result.iterations} iteraciones"
     if result.tool_format_errors:
         summary += f" · llamadas repetidas por formato inválido: {result.tool_format_errors}"

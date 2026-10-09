@@ -12,7 +12,7 @@ import shutil
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import pandas as pd
 
@@ -85,12 +85,22 @@ class Chart:
         )
 
 
+ToolStatus = Literal["evidence", "info", "error"]
+
+
 @dataclass
 class ToolResult:
-    """Lo que devuelve una herramienta: el texto para el modelo y, si la hay, la gráfica."""
+    """Lo que devuelve una herramienta: el texto para el modelo y, si la hay, la gráfica.
+
+    `status` dice qué valor tiene la salida para el verificador de cifras:
+    - evidence: salida de código que terminó bien; puede respaldar cifras de la respuesta
+    - info:     descripción de los datos (inspect_data); no cuenta como cálculo
+    - error:    la ejecución falló o la llamada era inválida
+    """
 
     text: str
     chart: Chart | None = None
+    status: ToolStatus = "evidence"
 
 
 def load_dataframe(path: Path) -> pd.DataFrame:
@@ -153,20 +163,16 @@ class DataTools:
         """Ejecuta la herramienta `name` y devuelve su resultado."""
         if INVALID_ARGUMENTS_KEY in arguments:
             raw = arguments[INVALID_ARGUMENTS_KEY]
-            return ToolResult(f"Error: los argumentos no son un objeto JSON válido: {raw!r}")
+            return _error(f"Error: los argumentos no son un objeto JSON válido: {raw!r}")
         if name == "inspect_data":
-            return ToolResult(self.inspect_data())
+            return ToolResult(self.inspect_data(), status="info")
         if name in ("run_python", "create_chart"):
             code = arguments.get("code")
             if not isinstance(code, str) or not code.strip():
-                return ToolResult(f"Error: {name} necesita el argumento 'code' con código Python.")
-            return (
-                ToolResult(self.run_python(code))
-                if name == "run_python"
-                else self.create_chart(code)
-            )
+                return _error(f"Error: {name} necesita el argumento 'code' con código Python.")
+            return self._run_python(code) if name == "run_python" else self.create_chart(code)
         names = ", ".join(d.name for d in self.definitions)
-        return ToolResult(f"Error: herramienta desconocida {name!r}. Disponibles: {names}.")
+        return _error(f"Error: herramienta desconocida {name!r}. Disponibles: {names}.")
 
     def inspect_data(self) -> str:
         df = load_dataframe(self.data_path)
@@ -193,13 +199,18 @@ class DataTools:
         return truncate("\n".join(lines))
 
     def run_python(self, code: str) -> str:
+        return self._run_python(code).text
+
+    def _run_python(self, code: str) -> ToolResult:
         result = run_code(code, self.data_path, self.timeout, self.workdir)
         if failure := self._stopped_message(result):
-            return failure
+            return _error(failure)
         if not result.ok:
-            return truncate(f"Error al ejecutar el código:\n{result.stderr.strip()}")
+            return _error(truncate(f"Error al ejecutar el código:\n{result.stderr.strip()}"))
         output = result.stdout.strip()
-        return truncate(output) if output else "(El código no imprimió nada. Usa print().)"
+        return ToolResult(
+            truncate(output) if output else "(El código no imprimió nada. Usa print().)"
+        )
 
     def create_chart(self, code: str) -> ToolResult:
         chart_path = self.workdir / "charts" / f"{uuid.uuid4().hex}.json"
@@ -213,11 +224,11 @@ class DataTools:
             max_points=self.max_chart_points,
         )
         if failure := self._stopped_message(result):
-            return ToolResult(failure)
+            return _error(failure)
         if result.chart_invalid:
-            return ToolResult(f"Error en la gráfica: {result.stderr.strip()}")
+            return _error(f"Error en la gráfica: {result.stderr.strip()}")
         if not result.ok:
-            return ToolResult(truncate(f"Error al ejecutar el código:\n{result.stderr.strip()}"))
+            return _error(truncate(f"Error al ejecutar el código:\n{result.stderr.strip()}"))
 
         info = json.loads(chart_path.read_text(encoding="utf-8"))
         chart = Chart(
@@ -240,6 +251,10 @@ class DataTools:
                 "detuvo. Imprime solo lo necesario o agrega los datos antes."
             )
         return None
+
+
+def _error(text: str) -> ToolResult:
+    return ToolResult(text, status="error")
 
 
 def _copy_into_workdir(data_path: Path, workdir: Path) -> Path:

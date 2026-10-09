@@ -42,6 +42,8 @@ class VerificationStats:
     flagged: int = 0  # cifras sin respaldo en la primera comprobación
     checked: int = 0  # cifras comprobadas en la respuesta final
     unverified: list[str] = field(default_factory=list)  # cifras sin respaldo al final
+    # La respuesta final trae cifras, pero la última ejecución de código de la pregunta falló.
+    last_execution_failed: bool = False
 
     @property
     def corrected(self) -> int:
@@ -110,6 +112,8 @@ class Agent:
         stats = VerificationStats()
         format_errors = 0
         tokens = 0
+        evidence: list[str] = []  # salidas de código de esta pregunta que terminaron bien
+        last_execution_failed = False
 
         for iteration in range(1, self.max_iterations + 1):
             try:
@@ -126,19 +130,22 @@ class Agent:
             )
             if not response.tool_calls:
                 answer = response.text.strip() or "(El modelo no devolvió una respuesta.)"
-                check = check_figures(answer, self._tool_outputs(current), question)
+                check = check_figures(answer, self._sources(evidence), question)
+                # Cifras tras una ejecución fallida: no salen de un cálculo que haya terminado.
+                failed = last_execution_failed and check.checked > 0
                 if stats.triggers == 0:
                     stats.flagged = len(check.unverified)
                 can_retry = iteration < self.max_iterations
-                if check.unverified and can_retry and stats.triggers < self.max_verifications:
+                needs_fix = check.unverified or failed
+                if needs_fix and can_retry and stats.triggers < self.max_verifications:
                     stats.triggers += 1
-                    current.append(
-                        Message(role="user", content=_verification_feedback(check.unverified))
-                    )
+                    feedback = _verification_feedback(question, check.unverified, failed)
+                    current.append(Message(role="user", content=feedback))
                     continue
                 stats.checked = check.checked
                 stats.unverified = check.unverified
-                self.turns.append(Turn(question, current, answer))
+                stats.last_execution_failed = failed
+                self.turns.append(Turn(question, current, answer, evidence))
                 return AgentResult(
                     answer=answer,
                     steps=steps,
@@ -155,8 +162,14 @@ class Agent:
                 ):
                     result = ToolResult(
                         f"Error: ya hay {self.max_charts} gráficas en esta respuesta, que es el "
-                        "máximo. No crees más gráficas."
+                        "máximo. No crees más gráficas.",
+                        status="info",
                     )
+                if result.status == "evidence":
+                    evidence.append(result.text)
+                    last_execution_failed = False
+                elif result.status == "error":
+                    last_execution_failed = True
                 steps.append(
                     Step(call.name, call.arguments, output=result.text, chart=result.chart)
                 )
@@ -165,7 +178,7 @@ class Agent:
         answer = (
             f"No llegué a una respuesta dentro del límite de {self.max_iterations} iteraciones."
         )
-        self.turns.append(Turn(question, current, answer))
+        self.turns.append(Turn(question, current, answer, evidence))
         return AgentResult(
             answer=answer,
             steps=steps,
@@ -185,21 +198,32 @@ class Agent:
         try:
             return self.tools.execute(name, arguments)
         except Exception as exc:  # noqa: BLE001 - un fallo de herramienta no debe detener el ciclo
-            return ToolResult(f"Error interno en la herramienta {name}: {exc}")
+            return ToolResult(f"Error interno en la herramienta {name}: {exc}", status="error")
 
-    def _tool_outputs(self, current: list[Message]) -> list[str]:
-        """Fuentes válidas de cifras: las salidas de todas las herramientas de la conversación,
-        incluidas las que ya no se envían al modelo."""
-        messages = [m for turn in self.turns for m in turn.messages] + current
-        return [message.content for message in messages if message.role == "tool"]
+    def _sources(self, evidence: list[str]) -> list[str]:
+        """Fuentes válidas de cifras: salidas de código que terminó bien, en toda la
+        conversación (también las que ya no se envían al modelo). inspect_data y las
+        ejecuciones fallidas no cuentan."""
+        return [text for turn in self.turns for text in turn.evidence] + evidence
 
 
-def _verification_feedback(unverified: list[str]) -> str:
-    figures = "; ".join(unverified)
-    return (
-        "[Verificador automático] Estas cifras de tu respuesta no aparecen en ninguna salida "
-        f"de las herramientas: {figures}. Cada cifra debe salir de un resultado ejecutado, "
-        "incluidas las derivadas (porcentajes, diferencias, totales). Calcúlalas con run_python "
-        "imprimiendo todos los valores que vas a dar, o quítalas. Después escribe de nuevo la "
-        "respuesta completa."
+def _verification_feedback(question: str, unverified: list[str], last_failed: bool) -> str:
+    parts = ["[Verificador automático]"]
+    if last_failed:
+        parts.append(
+            "Tu última ejecución de código falló, así que las cifras de tu respuesta no salen "
+            "de un cálculo que haya terminado bien. Corrige el código y ejecútalo de nuevo "
+            "antes de responder."
+        )
+    if unverified:
+        parts.append(
+            f"Estas cifras de tu respuesta no aparecen en ninguna salida de código que haya "
+            f"terminado bien: {'; '.join(unverified)}. inspect_data no cuenta como cálculo. "
+            "Calcúlalas con run_python, incluidas las derivadas (porcentajes, diferencias, "
+            "totales), imprimiendo todos los valores que vas a dar, o quítalas."
+        )
+    parts.append(
+        f"La pregunta que debes responder es: «{question}». Después escribe de nuevo la "
+        "respuesta completa a esa pregunta."
     )
+    return " ".join(parts)

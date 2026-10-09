@@ -251,6 +251,7 @@ def run_case(
             "flagged": result.verification.flagged,
             "checked": result.verification.checked,
             "unverified": result.verification.unverified,
+            "last_execution_failed": result.verification.last_execution_failed,
         },
         "steps": [step.tool for step in result.steps],
         "seconds": round(time.monotonic() - start, 1),

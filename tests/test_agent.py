@@ -244,3 +244,103 @@ def test_total_tokens_are_added_up() -> None:
         ScriptedLLM([first, LLMResponse(text="ok", total_tokens=1000)]), FakeTools()
     ).run("pregunta")
     assert result.total_tokens == 1900
+
+
+# --- Entrega C: verificador honesto (H1, H8) ------------------------------------------------
+
+
+class QueuedTools:
+    """Devuelve, en orden, los resultados indicados (con su estado para el verificador)."""
+
+    def __init__(self, results: list[ToolResult]) -> None:
+        self.definitions: list[ToolDefinition] = []
+        self.results = list(results)
+
+    def execute(self, name: str, arguments: dict[str, Any]) -> ToolResult:
+        return self.results.pop(0)
+
+
+def _call(name: str = "run_python", call_id: str = "c1") -> LLMResponse:
+    return LLMResponse(text="", tool_calls=[ToolCall(call_id, name, {"code": "x"})])
+
+
+def test_inspect_data_figures_do_not_back_the_answer() -> None:
+    tools = QueuedTools([ToolResult("Filas: 86, columnas: 5", status="info")])
+    llm = ScriptedLLM([_call("inspect_data"), LLMResponse(text="Hay 86 productos.")] * 1)
+    llm.responses.append(LLMResponse(text="Hay 86 productos."))
+    result = Agent(llm, tools, max_verifications=1).run("¿Cuántos productos distintos hay?")
+
+    assert result.verification.triggers == 1
+    assert result.verification.unverified == ["86"]
+    assert "inspect_data no cuenta como cálculo" in llm.calls[2][-1].content
+
+
+def test_failed_execution_output_does_not_back_the_answer() -> None:
+    error = ToolResult('Error al ejecutar el código:\nFile "<codigo>", line 86', status="error")
+    llm = ScriptedLLM([_call(), LLMResponse(text="Hay 86."), LLMResponse(text="Hay 86.")])
+    result = Agent(llm, QueuedTools([error]), max_verifications=1).run("¿Cuántos hay?")
+
+    assert result.verification.unverified == ["86"]
+
+
+def test_answer_after_a_failed_execution_is_sent_back() -> None:
+    tools = QueuedTools(
+        [
+            ToolResult("80"),
+            ToolResult("Error al ejecutar el código", status="error"),
+            ToolResult("80"),
+        ]
+    )
+    llm = ScriptedLLM(
+        [
+            _call(call_id="a"),
+            _call(call_id="b"),
+            LLMResponse(text="Son 80 productos."),  # 80 sale de "a", pero "b" falló
+            _call(call_id="c"),
+            LLMResponse(text="Son 80 productos."),
+        ]
+    )
+    result = Agent(llm, tools).run("¿Cuántos productos distintos hay?")
+
+    feedback = llm.calls[3][-1].content
+    assert "Tu última ejecución de código falló" in feedback
+    assert result.verification.triggers == 1
+    assert result.verification.last_execution_failed is False
+    assert result.answer == "Son 80 productos."
+
+
+def test_persistent_failure_is_marked() -> None:
+    error = ToolResult("Error al ejecutar el código", status="error")
+    tools = QueuedTools([ToolResult("80"), error])
+    llm = ScriptedLLM([_call(call_id="a"), _call(call_id="b")] + [LLMResponse(text="Son 80.")] * 3)
+    result = Agent(llm, tools, max_verifications=2).run("¿Cuántos hay?")
+
+    assert result.verification.triggers == 2
+    assert result.verification.last_execution_failed is True
+    assert result.verification.unverified == []
+
+
+def test_answer_without_figures_after_a_failure_is_accepted() -> None:
+    tools = QueuedTools([ToolResult("Error al ejecutar el código", status="error")])
+    llm = ScriptedLLM([_call(), LLMResponse(text="No se puede calcular con estos datos.")])
+    result = Agent(llm, tools).run("¿Cuál es la satisfacción promedio?")
+
+    assert result.verification.triggers == 0
+    assert result.verification.last_execution_failed is False
+
+
+def test_feedback_repeats_the_current_question() -> None:
+    llm = ScriptedLLM(
+        [
+            LLMResponse(text="primera"),
+            LLMResponse(text="Hace 4,7 grados."),
+            LLMResponse(text="No se puede."),
+        ]
+    )
+    agent = Agent(llm, FakeTools())
+    agent.run("¿Cuál fue la mínima más baja?")
+    agent.run("¿Qué temperatura hará mañana en Cali?")
+
+    feedback = llm.calls[-1][-1].content
+    assert "«¿Qué temperatura hará mañana en Cali?»" in feedback
+    assert "¿Cuál fue la mínima más baja?" not in feedback

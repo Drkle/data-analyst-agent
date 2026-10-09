@@ -58,13 +58,19 @@ def render_result(result: AgentResult) -> None:
     # "$" activa fórmulas LaTeX en st.markdown; se escapa para mostrar importes tal cual.
     st.markdown(result.answer.replace("$", "\\$"))
     verification = result.verification
+    if verification.last_execution_failed:
+        st.warning(
+            "La última ejecución de código falló: las cifras de esta respuesta pueden no venir "
+            "de un cálculo."
+        )
     if verification.unverified:
         st.warning(
-            "Cifras sin verificar con código: "
+            "Cifras que no salen de ningún cálculo: "
             + ", ".join(verification.unverified).replace("$", "\\$")
         )
-    elif verification.checked:
-        st.caption("✓ Cifras verificadas contra el código ejecutado")
+    elif verification.checked and not verification.last_execution_failed:
+        # Garantiza el origen de cada cifra, no que responda la pregunta: de ahí el texto.
+        st.caption("✓ Cifras calculadas con código")
     for chart in result.charts:
         st.plotly_chart(pio.from_json(chart.figure_json))
 

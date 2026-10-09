@@ -129,3 +129,13 @@ def test_file_over_size_limit_raises(tmp_path: Path, monkeypatch: pytest.MonkeyP
     monkeypatch.setattr(tools_module, "MAX_FILE_BYTES", 10)
     with pytest.raises(ValueError, match="máximo"):
         DataTools(csv, workdir=tmp_path / "trabajo")
+
+
+def test_results_carry_their_status_for_the_verifier(tools: DataTools) -> None:
+    assert tools.execute("inspect_data", {}).status == "info"
+    assert tools.execute("run_python", {"code": "print(1)"}).status == "evidence"
+    assert tools.execute("run_python", {"code": "1/0"}).status == "error"
+    assert tools.execute("create_chart", {"code": "fig = 3"}).status == "error"
+    assert tools.execute("create_chart", {"code": GROUPED_BAR}).status == "evidence"
+    assert tools.execute("run_python", {}).status == "error"
+    assert tools.execute("borrar_todo", {}).status == "error"

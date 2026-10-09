@@ -1,4 +1,4 @@
-"""Verificador de cifras: comprueba que cada número de la respuesta salga de una herramienta.
+"""Verificador de cifras: comprueba que cada número de la respuesta salga de un cálculo.
 
 Reglas de comparación:
 - La cifra de la respuesta se compara con los números de las salidas de las herramientas,
@@ -10,6 +10,10 @@ Reglas de comparación:
   aparecen en la pregunta del usuario.
 Las cifras derivadas (porcentajes, diferencias) que no salgan del código se marcan igual
 que cualquier otra: deben calcularse con código.
+
+Qué cuenta como fuente lo decide quien llama: el agente solo pasa salidas de código que
+terminó bien (ni inspect_data ni ejecuciones fallidas). El verificador garantiza el origen
+de cada cifra, no que la cifra responda la pregunta: eso lo miden las evaluaciones.
 """
 
 from __future__ import annotations
