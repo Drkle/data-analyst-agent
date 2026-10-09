@@ -37,7 +37,7 @@ def test_non_linux_is_development_only(report: dict) -> None:
 @pytest.mark.skipif(not IS_LINUX, reason="pruebas del kernel de Linux")
 def test_linux_checks_run_without_crashing(report: dict) -> None:
     linux = report["linux"]
-    for key in ("landlock_archivos", "landlock_red", "seccomp_filtro", "user_namespaces"):
+    for key in ("landlock_archivos", "landlock_red", "seccomp_filtro", "user_ns_y_montaje"):
         assert isinstance(linux[key], str) and linux[key]
     assert "numpy" in linux["rlimit_as_1gb"]
     # Un informe por variante o prueba, o un texto ("no instalado", un error...).

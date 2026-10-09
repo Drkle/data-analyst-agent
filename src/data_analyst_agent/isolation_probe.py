@@ -106,11 +106,37 @@ except PermissionError:
     print("funciona")
 """
 
+# No basta con que unshare(CLONE_NEWUSER) funcione: se repiten los pasos que da bubblewrap
+# (user + mount namespace, mapeo de uid/gid, propagación de "/" a slave y un montaje) y se
+# dice en cuál falla.
 _UNSHARE_TEST = """
-import ctypes
+import ctypes, os, tempfile
 libc = ctypes.CDLL(None, use_errno=True)
-result = libc.unshare(0x10000000)  # CLONE_NEWUSER
-print("permitido" if result == 0 else f"bloqueado (errno {ctypes.get_errno()})")
+libc.mount.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_ulong,
+                       ctypes.c_void_p]
+CLONE_NEWUSER, CLONE_NEWNS = 0x10000000, 0x00020000
+MS_REC, MS_SLAVE = 1 << 14, 1 << 19
+uid, gid = os.getuid(), os.getgid()
+
+def fail(step):
+    print(f"falla al {step} (errno {ctypes.get_errno()})")
+    raise SystemExit
+
+if libc.unshare(CLONE_NEWUSER | CLONE_NEWNS) != 0:
+    fail("crear el user namespace y el de montajes")
+try:
+    for name, value in (("setgroups", "deny"), ("uid_map", f"0 {uid} 1"),
+                        ("gid_map", f"0 {gid} 1")):
+        with open(f"/proc/self/{name}", "w") as f:
+            f.write(value)
+except OSError as exc:
+    print(f"falla al mapear uid/gid ({exc.strerror})")
+    raise SystemExit
+if libc.mount(None, b"/", None, MS_REC | MS_SLAVE, None) != 0:
+    fail("cambiar la propagación de / a slave")
+if libc.mount(b"tmpfs", tempfile.mkdtemp().encode(), b"tmpfs", 0, None) != 0:
+    fail("montar un tmpfs")
+print("funciona")
 """
 
 # Comprueba si un límite de memoria de 1 GB rompe la importación de las librerías numéricas.
@@ -294,7 +320,9 @@ def run_probe() -> dict[str, Any]:
             "landlock_red": _in_child(_LANDLOCK_NET_TEST),
             "seccomp_filtro": _in_child(_SECCOMP_TEST),
             "libseccomp": _libseccomp(),
-            "user_namespaces": _in_child(_UNSHARE_TEST),
+            # Informativo: el nivel nunca lo cuenta por sí solo; cuenta bwrap_sandbox, que
+            # crea el sandbox completo.
+            "user_ns_y_montaje": _in_child(_UNSHARE_TEST),
             "bwrap_sandbox": _json_child(_BWRAP_TEST),
             "seccomp_sin_open": _json_child(_SECCOMP_NO_OPEN_TEST),
             "estado_proceso": _proc_status(),

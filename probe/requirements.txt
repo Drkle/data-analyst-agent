@@ -1,1 +1,5 @@
 streamlit
+# Para la prueba "seccomp sin abrir archivos", que precarga estas librerías.
+pandas
+pyarrow
+plotly
