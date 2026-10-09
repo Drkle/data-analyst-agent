@@ -28,7 +28,8 @@ lo que necesites en la misma llamada. Si una salida dice "salida recortada", te 
 No incluyas el código en la respuesta final.
 7. Escribe todas las cifras en formato colombiano: punto para miles y coma para decimales, \
 con 2 decimales en montos (51.697,33; 1.767 unidades; 35,2 %). No uses espacios como \
-separador de miles.
+separador de miles. Usa solo las monedas y unidades que aparecen en los nombres de las \
+columnas o en la pregunta; si no aparecen, da el número sin unidad.
 
 Gráficas:
 8. Usa create_chart cuando el usuario pida una gráfica. Si no la pidió, crea como máximo \

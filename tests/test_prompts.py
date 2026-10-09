@@ -15,3 +15,8 @@ def test_prompt_asks_to_sort_bars() -> None:
 def test_prompt_asks_for_colombian_number_format() -> None:
     assert "formato colombiano" in SYSTEM_PROMPT
     assert "51.697,33" in SYSTEM_PROMPT
+
+
+def test_prompt_forbids_inventing_currencies_or_units() -> None:
+    assert "Usa solo las monedas y unidades que aparecen" in SYSTEM_PROMPT
+    assert "da el número sin unidad" in SYSTEM_PROMPT

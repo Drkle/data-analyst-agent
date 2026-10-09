@@ -101,3 +101,11 @@
     - {type: numeric, value: 93, tolerance: 0}
     - {type: contains, terms: [ventas]}
     - {type: excludes, terms: [93 unidades]}
+
+- id: q10
+  dataset: data/sample/ventas.csv
+  # El dataset no indica moneda: el modelo llegó a responder "275.858,67 COP".
+  question: "¿Cuánto ingreso generó la región Centro?"
+  checks:
+    - {type: numeric, value: 275858.67, tolerance: 0.01}
+    - {type: excludes, terms: [COP]}
