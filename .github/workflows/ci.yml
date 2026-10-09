@@ -18,6 +18,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
+      - name: Instalar bubblewrap (para el sondeo)
+        if: runner.os == 'Linux'
+        run: sudo apt-get install -y bubblewrap
       - name: Instalar dependencias
         run: pip install -e ".[dev]"
       - name: Ruff
@@ -29,4 +32,7 @@ jobs:
       - name: Sondeo de aislamiento
         if: always()
         shell: bash
-        run: python -m data_analyst_agent.isolation_probe | tee -a "$GITHUB_STEP_SUMMARY"
+        run: |
+          python -m data_analyst_agent.isolation_probe --github > sondeo.txt
+          grep -v '^::notice' sondeo.txt | tee -a "$GITHUB_STEP_SUMMARY"
+          grep '^::notice' sondeo.txt

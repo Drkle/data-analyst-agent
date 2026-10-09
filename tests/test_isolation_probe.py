@@ -7,7 +7,12 @@ from pathlib import Path
 import pytest
 from streamlit.testing.v1 import AppTest
 
-from data_analyst_agent.isolation_probe import format_markdown, main, run_probe
+from data_analyst_agent.isolation_probe import (
+    format_markdown,
+    github_annotation,
+    main,
+    run_probe,
+)
 
 IS_LINUX = sys.platform.startswith("linux")
 
@@ -32,9 +37,17 @@ def test_non_linux_is_development_only(report: dict) -> None:
 @pytest.mark.skipif(not IS_LINUX, reason="pruebas del kernel de Linux")
 def test_linux_checks_run_without_crashing(report: dict) -> None:
     linux = report["linux"]
-    for key in ("landlock_archivos", "landlock_red", "seccomp_filtro", "user_namespaces"):
+    for key in (
+        "landlock_archivos",
+        "landlock_red",
+        "seccomp_filtro",
+        "user_namespaces",
+        "bwrap_sandbox",
+    ):
         assert isinstance(linux[key], str) and linux[key]
     assert "numpy" in linux["rlimit_as_1gb"]
+    # Un informe por prueba (análisis, gráficas...) o un texto si no se pudo instalar.
+    assert isinstance(linux["seccomp_sin_open"], (dict, str)) and linux["seccomp_sin_open"]
 
 
 def test_markdown_shows_level(report: dict) -> None:
@@ -46,6 +59,12 @@ def test_markdown_shows_level(report: dict) -> None:
 def test_cli_prints_markdown(capsys: pytest.CaptureFixture[str]) -> None:
     assert main([]) == 0
     assert "**Nivel:**" in capsys.readouterr().out
+
+
+def test_github_annotations_are_single_escaped_lines() -> None:
+    line = github_annotation("Sondeo: x", {"a": "100% listo\nfin"})
+    assert line == '::notice title=Sondeo: x::{"a": "100%25 listo\\nfin"}'
+    assert "\n" not in github_annotation("t", "uno\ndos")
 
 
 def test_probe_app_renders() -> None:

@@ -137,6 +137,123 @@ print("; ".join(results))
 """
 
 
+# bubblewrap de verdad: crea los namespaces y monta solo Python y la carpeta de la sesión
+# (con data/ en solo lectura). Dentro comprueba qué se puede y qué no.
+_BWRAP_TEST = r"""
+import json, os, shutil, subprocess, sys, tempfile
+bwrap = shutil.which("bwrap")
+if not bwrap:
+    print("no instalado"); sys.exit()
+import pandas as pd
+base = tempfile.mkdtemp()
+session = os.path.join(base, "sesion")
+data = os.path.join(session, "data")
+os.makedirs(data)
+pd.DataFrame({"a": [1, 2, 3]}).to_parquet(os.path.join(data, "t.parquet"))
+outside = os.path.join(base, "fuera_de_la_sesion.txt")
+with open(outside, "w") as f:
+    f.write("secreto")
+inner = '''
+import json, socket
+r = {}
+import pandas as pd
+r["lee_datos"] = int(pd.read_parquet("data/t.parquet")["a"].sum()) == 6
+def blocked(action):
+    try:
+        action()
+        return False
+    except OSError:
+        return True
+r["escribe_en_sesion"] = not blocked(lambda: open("salida.txt", "w").write("ok"))
+r["bloquea_escritura_en_data"] = blocked(lambda: open("data/x.txt", "w").write("x"))
+r["bloquea_archivo_externo"] = blocked(lambda: open(OUTSIDE).read())
+r["bloquea_etc_passwd"] = blocked(lambda: open("/etc/passwd").read())
+r["bloquea_red"] = blocked(lambda: socket.create_connection(("1.1.1.1", 443), timeout=3))
+print(json.dumps(r))
+'''.replace("OUTSIDE", repr(outside))
+args = [
+    bwrap, "--unshare-all", "--die-with-parent", "--new-session",
+    "--ro-bind", "/usr", "/usr",
+    "--symlink", "usr/lib", "/lib", "--symlink", "usr/lib64", "/lib64",
+    "--symlink", "usr/bin", "/bin",
+    "--ro-bind-try", "/etc/ld.so.cache", "/etc/ld.so.cache",
+    "--proc", "/proc", "--dev", "/dev", "--tmpfs", "/tmp",
+    "--bind", session, "/sesion", "--ro-bind", data, "/sesion/data",
+    "--chdir", "/sesion", "--clearenv", "--setenv", "HOME", "/sesion",
+]
+for prefix in sorted({os.path.realpath(p) for p in (sys.prefix, sys.base_prefix)}):
+    if not prefix.startswith("/usr"):
+        args += ["--ro-bind", prefix, prefix]
+proc = subprocess.run(
+    [*args, sys.executable, "-I", "-c", inner], capture_output=True, text=True, timeout=60
+)
+if proc.returncode != 0:
+    error = (proc.stderr.strip().splitlines() or ["sin mensaje"])[-1]
+    print(f"falla al crear el sandbox: {error[:200]}"); sys.exit()
+results = json.loads(proc.stdout.strip().splitlines()[-1])
+failed = [name for name, ok in results.items() if not ok]
+print("funciona" if not failed else f"incompleto: falla {', '.join(failed)}")
+"""
+
+# seccomp sin apertura de archivos: precarga librerías y datos, deja abierto el descriptor de
+# salida, niega open/openat/openat2/creat y prueba un análisis y gráficas normales.
+_SECCOMP_NO_OPEN_TEST = r"""
+import ctypes, json, os, platform, sys, tempfile
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
+nrs = {
+    "x86_64": [2, 257, 437, 85],   # open, openat, openat2, creat
+    "aarch64": [56, 437],          # openat, openat2 (no tiene open ni creat)
+}.get(platform.machine())
+if nrs is None:
+    print(f"arquitectura no soportada: {platform.machine()}"); sys.exit()
+base = tempfile.mkdtemp()
+path = os.path.join(base, "t.parquet")
+pd.DataFrame({"cat": list("abcab"), "v": [1, 2, 3, 4, 5]}).to_parquet(path)
+df = pd.read_parquet(path)
+# Precalentamiento: un análisis y una gráfica de barras completos antes del filtro.
+df.groupby("cat")["v"].sum().to_string()
+px.bar(df.groupby("cat", as_index=False)["v"].sum(), x="cat", y="v").to_json()
+out = open(os.path.join(base, "grafica.json"), "w")  # salida abierta antes del filtro
+
+class Filter(ctypes.Structure):
+    _fields_ = [("code", ctypes.c_uint16), ("jt", ctypes.c_uint8), ("jf", ctypes.c_uint8),
+                ("k", ctypes.c_uint32)]
+
+class Prog(ctypes.Structure):
+    _fields_ = [("len", ctypes.c_uint16), ("filter", ctypes.POINTER(Filter))]
+
+rules = [Filter(0x20, 0, 0, 0)]  # cargar el número de syscall
+for i, nr in enumerate(nrs):
+    rules.append(Filter(0x15, len(nrs) - i, 0, nr))  # si coincide, saltar a "denegar"
+rules.append(Filter(0x06, 0, 0, 0x7FFF0000))         # permitir
+rules.append(Filter(0x06, 0, 0, 0x00050000 | 1))     # denegar con EPERM
+program = (Filter * len(rules))(*rules)
+prog = Prog(len(rules), ctypes.cast(program, ctypes.POINTER(Filter)))
+libc = ctypes.CDLL(None, use_errno=True)
+if libc.prctl(38, 1, 0, 0, 0) != 0 or libc.prctl(22, 2, ctypes.byref(prog), 0, 0) != 0:
+    print(f"no se pudo instalar (errno {ctypes.get_errno()})"); sys.exit()
+
+def attempt(action):
+    try:
+        action()
+        return "ok"
+    except Exception as exc:
+        return f"falla ({type(exc).__name__}: {str(exc)[:80]})"
+
+r = {
+    "analisis": attempt(lambda: df.groupby("cat")["v"].agg(["sum", "mean"]).describe().to_string()),
+    "grafica_de_barras": attempt(lambda: px.bar(df, x="cat", y="v").to_json()),
+    "grafica_de_otro_tipo": attempt(lambda: px.pie(df, names="cat", values="v").to_json()),
+    "escribe_en_salida_abierta": attempt(lambda: (out.write("{}"), out.flush())),
+}
+blocked = attempt(lambda: open("/etc/hostname").read())
+r["bloquea_abrir_archivos"] = "ok" if "PermissionError" in blocked else f"NO ({blocked})"
+print(json.dumps(r, ensure_ascii=False))
+"""
+
+
 def run_probe() -> dict[str, Any]:
     """Ejecuta todas las comprobaciones y devuelve un informe."""
     report: dict[str, Any] = {"sistema": _system_info()}
@@ -148,6 +265,8 @@ def run_probe() -> dict[str, Any]:
             "seccomp_filtro": _in_child(_SECCOMP_TEST),
             "libseccomp": _libseccomp(),
             "user_namespaces": _in_child(_UNSHARE_TEST),
+            "bwrap_sandbox": _in_child(_BWRAP_TEST),
+            "seccomp_sin_open": _seccomp_no_open(),
             "estado_proceso": _proc_status(),
             "limites": _rlimits(),
             "memoria_cgroup": _read("/sys/fs/cgroup/memory.max"),
@@ -190,6 +309,14 @@ def _level(report: dict[str, Any]) -> dict[str, Any]:
     if files and syscalls:
         network = " y red por Landlock" if linux["landlock_red"] == FUNCIONA else ""
         return {"nivel": f"fuerte: Landlock (archivos{network}) + seccomp", "suficiente": True}
+    if linux.get("bwrap_sandbox") == FUNCIONA and syscalls:
+        return {"nivel": "fuerte: bubblewrap (namespaces) + seccomp", "suficiente": True}
+    no_open = linux.get("seccomp_sin_open", {})
+    if syscalls and isinstance(no_open, dict) and all(v == "ok" for v in no_open.values()):
+        return {
+            "nivel": "suficiente: seccomp con precarga (sin abrir archivos tras cargar)",
+            "suficiente": True,
+        }
     if syscalls:
         text = "parcial: seccomp sin Landlock (archivos sin protección del kernel)"
     elif files:
@@ -197,6 +324,14 @@ def _level(report: dict[str, Any]) -> dict[str, Any]:
     else:
         text = "insuficiente: ni Landlock ni seccomp"
     return {"nivel": f"{text}. La app cerraría; evaluar el plan B (Pyodide)", "suficiente": False}
+
+
+def _seccomp_no_open() -> dict[str, str] | str:
+    output = _in_child(_SECCOMP_NO_OPEN_TEST)
+    try:
+        return json.loads(output)
+    except json.JSONDecodeError:
+        return output  # p. ej. "no se pudo instalar..." o un error
 
 
 def _in_child(code: str) -> str:
@@ -306,12 +441,29 @@ def _read(path: str) -> str:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Sondeo del aislamiento disponible.")
     parser.add_argument("--json", action="store_true", help="salida en JSON en vez de Markdown")
+    parser.add_argument(
+        "--github",
+        action="store_true",
+        help="además, anotaciones de GitHub Actions (se leen sin iniciar sesión)",
+    )
     args = parser.parse_args(argv)
     report = run_probe()
     print(
         json.dumps(report, indent=2, ensure_ascii=False) if args.json else format_markdown(report)
     )
+    if args.github:
+        print(github_annotation("Sondeo: nivel", report["nivel"]["nivel"]))
+        for section in ("sistema", "linux", "herramientas"):
+            if section in report:
+                print(github_annotation(f"Sondeo: {section}", report[section]))
     return 0
+
+
+def github_annotation(title: str, value: Any) -> str:
+    """Línea ::notice:: de GitHub Actions; el mensaje va en una sola línea, escapado."""
+    text = value if isinstance(value, str) else json.dumps(value, ensure_ascii=False)
+    text = text.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+    return f"::notice title={title}::{text}"
 
 
 if __name__ == "__main__":
