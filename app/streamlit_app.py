@@ -21,7 +21,7 @@ from data_analyst_agent.config import ConfigError, Settings, load_settings
 from data_analyst_agent.formatting import format_preview
 from data_analyst_agent.llm import LLMError, create_client
 from data_analyst_agent.sandbox import new_session_dir, remove_session_dir
-from data_analyst_agent.tools import MAX_FILE_BYTES, DataTools, load_dataframe
+from data_analyst_agent.tools import MAX_FILE_BYTES, DataTools, LoadError
 
 CODE_TOOLS = {"run_python", "create_chart"}
 MAX_FILE_MB = MAX_FILE_BYTES // 1024 // 1024
@@ -32,26 +32,48 @@ def reset_session() -> None:
     workdir = st.session_state.pop("workdir", None)
     if workdir is not None:
         remove_session_dir(workdir)
-    for key in ("file_id", "file_name", "agent", "history", "preview"):
+    for key in ("file_id", "file_name", "agent", "history", "preview", "sheet", "sheets"):
         st.session_state.pop(key, None)
 
 
-def start_session(uploaded: Any, settings: Settings) -> None:
-    """Prepara una sesión nueva para el archivo subido."""
+def start_session(uploaded: Any, settings: Settings, sheet: str | None = None) -> None:
+    """Prepara una sesión nueva (conversación vacía) para el archivo y la hoja elegidos.
+
+    La app nunca lee el archivo: el sandbox lo carga y normaliza, y de ahí sale también la
+    vista previa, para que el usuario vea lo mismo que el agente.
+    """
     reset_session()
     workdir = new_session_dir()
+    st.session_state.workdir = workdir
     # Nombre fijo dentro de la carpeta de sesión: el nombre original nunca forma la ruta.
     data_path = workdir / f"datos{Path(uploaded.name).suffix.lower()}"
     data_path.write_bytes(uploaded.getvalue())
-    st.session_state.workdir = workdir
-    tools = DataTools(data_path, timeout=settings.sandbox_timeout, workdir=workdir)
+    tools = DataTools(
+        data_path,
+        timeout=settings.sandbox_timeout,
+        workdir=workdir,
+        sheet=sheet,
+        display_name=uploaded.name,
+    )
     st.session_state.update(
         file_id=uploaded.file_id,
         file_name=uploaded.name,
-        preview=load_dataframe(data_path).head(10),
+        sheet=tools.sheet,
+        sheets=tools.load_info["sheets"],
+        preview=tools.preview(),
         agent=Agent.from_settings(create_client(settings), tools, settings),
         history=[],
     )
+
+
+def open_file(uploaded: Any, settings: Settings, sheet: str | None = None) -> None:
+    """Abre el archivo (o la hoja); si no se puede, lo dice en español y detiene la app."""
+    try:
+        start_session(uploaded, settings, sheet)
+    except LoadError as exc:
+        reset_session()
+        st.error(f"No se pudo leer el archivo: {exc}")
+        st.stop()
 
 
 def render_result(result: AgentResult) -> None:
@@ -123,15 +145,21 @@ def main() -> None:
         st.stop()
 
     if uploaded.file_id != st.session_state.get("file_id"):
-        try:
-            start_session(uploaded, settings)
-        except Exception as exc:  # noqa: BLE001 - cualquier fallo al leer se muestra al usuario
-            reset_session()
-            st.error(f"No se pudo leer el archivo: {exc}")
-            st.stop()
+        open_file(uploaded, settings)
 
     with st.sidebar:
         st.subheader(st.session_state.file_name)
+        sheets: list[str] = st.session_state.sheets
+        if len(sheets) > 1:
+            chosen = st.selectbox(
+                "Hoja del Excel",
+                sheets,
+                index=sheets.index(st.session_state.sheet),
+                help="Cambiar de hoja empieza una conversación nueva.",
+            )
+            if chosen != st.session_state.sheet:
+                open_file(uploaded, settings, sheet=chosen)
+                st.rerun()
         preview: pd.DataFrame = st.session_state.preview
         st.dataframe(format_preview(preview), hide_index=True)
 

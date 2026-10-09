@@ -13,7 +13,7 @@ import plotly.io as pio
 from data_analyst_agent.agent import Agent, AgentResult
 from data_analyst_agent.config import ConfigError, load_settings
 from data_analyst_agent.llm import LLMError, create_client
-from data_analyst_agent.tools import DataTools
+from data_analyst_agent.tools import DataTools, LoadError
 
 EXIT_WORDS = {"salir", "exit", "quit"}
 CODE_TOOLS = {"run_python", "create_chart"}
@@ -25,16 +25,19 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "-v", "--verbose", action="store_true", help="muestra también la salida de cada herramienta"
     )
+    parser.add_argument("--hoja", help="hoja del Excel a analizar (por defecto, la primera)")
     args = parser.parse_args(argv)
     if not args.archivo.exists():
         parser.error(f"no existe el archivo {args.archivo}")
 
     try:
         settings = load_settings()
-        tools = DataTools(args.archivo, timeout=settings.sandbox_timeout)
-    except (ConfigError, ValueError) as exc:
+        tools = DataTools(args.archivo, timeout=settings.sandbox_timeout, sheet=args.hoja)
+    except (ConfigError, LoadError, ValueError) as exc:
         print(f"Error: {exc}")
         return 1
+    if len(tools.load_info["sheets"]) > 1:
+        print(f"Hojas: {', '.join(tools.load_info['sheets'])}. En uso: {tools.sheet}.")
 
     agent = Agent.from_settings(create_client(settings), tools, settings)
     print(f"Analizando {args.archivo.name} con {settings.provider} ({settings.model}).")

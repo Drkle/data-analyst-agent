@@ -183,8 +183,13 @@ def test_run_case_classifies_non_agent_problems(root: Path) -> None:
     assert (
         run_case(_case(dataset="datos/no_existe.csv"), SETTINGS, llm, root)["status"] == "omitido"
     )
-    assert run_case(_case(sheet="Gastos"), SETTINGS, llm, root)["status"] == "omitido"
-    assert run_case(_case(dataset="datos/roto.csv"), SETTINGS, llm, root)["status"] == "error_carga"
+    ws = root / "ws"
+    roto = run_case(_case(dataset="datos/roto.csv"), SETTINGS, llm, root, workspace=ws)
+    assert roto["status"] == "error_carga"
+    assert roto["error"].startswith("El archivo no parece una tabla")  # en español, sin traceback
+    # Pedir una hoja a un CSV es un error de carga, no un caso omitido.
+    sheet_on_csv = run_case(_case(sheet="Gastos"), SETTINGS, llm, root, workspace=ws)
+    assert sheet_on_csv["status"] == "error_carga"
 
 
 def test_run_case_call_error_keeps_tokens(root: Path) -> None:

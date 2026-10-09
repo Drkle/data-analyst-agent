@@ -10,6 +10,7 @@ dependencies = [
     "anthropic",       # opcional
     "pandas",
     "openpyxl",
+    "pyarrow",         # Parquet: formato del dataset normalizado
     "plotly",
     "streamlit",
     "python-dotenv",

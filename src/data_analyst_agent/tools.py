@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+import io
 import json
 import shutil
 import uuid
@@ -16,18 +17,24 @@ from typing import Any, Literal
 
 import pandas as pd
 
+from data_analyst_agent import loading
 from data_analyst_agent.chart_format import format_figure
 from data_analyst_agent.llm import INVALID_ARGUMENTS_KEY, ToolDefinition
+from data_analyst_agent.loading import LoadError
 from data_analyst_agent.sandbox import (
     MAX_OUTPUT_BYTES,
     ExecutionResult,
     new_session_dir,
     run_code,
+    run_program,
 )
 
 MAX_OUTPUT_CHARS = 4000
 MAX_CHART_POINTS = 5000
 MAX_FILE_BYTES = 50 * 1024 * 1024
+LOAD_TIMEOUT = 60.0
+
+__all__ = ["DataTools", "LoadError", "ToolResult"]
 
 _CODE_PARAMETERS: dict[str, Any] = {
     "type": "object",
@@ -103,10 +110,22 @@ class ToolResult:
     status: ToolStatus = "evidence"
 
 
-def load_dataframe(path: Path) -> pd.DataFrame:
-    if path.suffix.lower() == ".xlsx":
-        return pd.read_excel(path)
-    return pd.read_csv(path)
+# Lo ejecuta inspect_data en el sandbox, sobre el Parquet ya normalizado (df).
+_INSPECT_CODE = """
+print(f"Filas: {len(df)}, columnas: {len(df.columns)}")
+print()
+print("Columnas:")
+for col, dtype, nulls in zip(df.columns, df.dtypes, df.isna().sum()):
+    print(f"- {col}: {dtype}, {nulls} nulos")
+print()
+print("Primeras 5 filas:")
+print(df.head().to_string())
+numeric = df.select_dtypes("number")
+if not numeric.empty:
+    print()
+    print("Estadísticas de columnas numéricas:")
+    print(numeric.describe().round(2).to_string())
+"""
 
 
 def truncate(text: str, limit: int = MAX_OUTPUT_CHARS) -> str:
@@ -142,7 +161,13 @@ class DataTools:
         timeout: float = 30.0,
         workdir: Path | None = None,
         max_chart_points: int = MAX_CHART_POINTS,
+        sheet: str | None = None,
+        display_name: str | None = None,
     ) -> None:
+        """Copia el archivo a la carpeta de la sesión y lo carga en el sandbox.
+
+        Lanza LoadError (mensaje en español) si el archivo no se puede cargar.
+        """
         if not data_path.exists():
             raise FileNotFoundError(f"No existe el archivo {data_path}")
         size = data_path.stat().st_size
@@ -153,11 +178,23 @@ class DataTools:
             )
         self.timeout = timeout
         self.workdir = workdir if workdir is not None else new_session_dir()
-        self.display_name = data_path.name
-        # El proceso hijo solo recibe una copia dentro de la carpeta de la sesión.
-        self.data_path = _copy_into_workdir(data_path, self.workdir)
+        self.display_name = display_name or data_path.name
         self.max_chart_points = max_chart_points
         self.definitions: list[ToolDefinition] = [INSPECT_DATA, RUN_PYTHON, CREATE_CHART]
+        # La app nunca lee el archivo subido: el proceso aislado lo carga y lo normaliza.
+        source = _copy_into_workdir(data_path, self.workdir)
+        self.load_info = _prepare_in_sandbox(source, self.workdir, sheet)
+        self.sheet: str | None = self.load_info["sheet"]
+        self.data_path = self.workdir / self.load_info["parquet"]
+
+    def preview(self) -> pd.DataFrame:
+        """Primeras filas tal como las ve el agente (las escribió el cargador, en el sandbox)."""
+        return pd.read_json(
+            io.StringIO(self.load_info["preview"]),
+            orient="split",
+            dtype=False,
+            convert_dates=False,
+        )
 
     def execute(self, name: str, arguments: dict[str, Any]) -> ToolResult:
         """Ejecuta la herramienta `name` y devuelve su resultado."""
@@ -175,28 +212,37 @@ class DataTools:
         return _error(f"Error: herramienta desconocida {name!r}. Disponibles: {names}.")
 
     def inspect_data(self) -> str:
-        df = load_dataframe(self.data_path)
-        lines = [
-            f"Archivo: {self.display_name}",
-            f"Filas: {len(df)}, columnas: {len(df.columns)}",
-            "",
-            "Columnas:",
-            *(
-                f"- {col}: {dtype}, {nulls} nulos"
-                for col, dtype, nulls in zip(df.columns, df.dtypes, df.isna().sum())
-            ),
-            "",
-            "Primeras 5 filas:",
-            df.head().to_string(),
-        ]
-        numeric = df.select_dtypes("number")
-        if not numeric.empty:
-            lines += [
-                "",
-                "Estadísticas de columnas numéricas:",
-                numeric.describe().round(2).to_string(),
-            ]
-        return truncate("\n".join(lines))
+        result = run_code(_INSPECT_CODE, self.data_path, self.timeout, self.workdir)
+        if failure := self._stopped_message(result):
+            return failure
+        if not result.ok:
+            return f"Error al inspeccionar los datos:\n{result.stderr.strip()}"
+        return truncate("\n".join([*self._load_summary(), "", result.stdout.strip()]))
+
+    def _load_summary(self) -> list[str]:
+        """Cómo se leyó el archivo: formato, hojas y columnas que quedaron como texto."""
+        info = self.load_info
+        lines = [f"Archivo: {self.display_name}"]
+        if info["sheets"]:
+            sheets = ", ".join(
+                f"{name} (en uso)" if name == info["sheet"] else name for name in info["sheets"]
+            )
+            lines.append(f"Hojas del Excel: {sheets}.")
+            if len(info["sheets"]) > 1:
+                lines.append(
+                    "Solo se analiza la hoja en uso. Para otra hoja, el usuario debe elegirla "
+                    "(en la barra lateral de la app o con --hoja en la terminal)."
+                )
+        else:
+            separator = "tabulador" if info["separator"] == "\t" else repr(info["separator"])
+            lines.append(
+                f"Formato detectado: codificación {info['encoding']}, separador {separator}, "
+                f"decimal {info['decimal']!r}, miles {info['thousands']!r}."
+            )
+        if info["text_columns"]:
+            lines.append("Columnas leídas como texto a propósito (no se modificó ningún valor):")
+            lines += [f"- {col!r}: {reason}" for col, reason in info["text_columns"].items()]
+        return lines
 
     def run_python(self, code: str) -> str:
         return self._run_python(code).text
@@ -255,6 +301,22 @@ class DataTools:
 
 def _error(text: str) -> ToolResult:
     return ToolResult(text, status="error")
+
+
+def _prepare_in_sandbox(source: Path, workdir: Path, sheet: str | None) -> dict[str, Any]:
+    """Carga y normaliza el archivo en un proceso aislado (ver loading.py)."""
+    program = Path(loading.__file__).read_text(encoding="utf-8")
+    args = [str(source.resolve()), str(workdir.resolve()), sheet or ""]
+    result = run_program(program, args, stdin="", timeout=LOAD_TIMEOUT, workdir=workdir)
+    if result.timed_out:
+        raise LoadError(f"La carga del archivo superó {LOAD_TIMEOUT:g} s y se detuvo.")
+    try:
+        outcome = json.loads(result.stdout.strip().splitlines()[-1])
+    except (IndexError, json.JSONDecodeError) as exc:
+        raise LoadError("No se pudo leer el archivo.") from exc
+    if not outcome["ok"]:
+        raise LoadError(outcome["error"])
+    return outcome["info"]
 
 
 def _copy_into_workdir(data_path: Path, workdir: Path) -> Path:

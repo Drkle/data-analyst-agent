@@ -95,10 +95,13 @@ Casos en `evals/questions.yaml` (dataset de ventas) y `evals/questions_test_sets
 (datasets sintéticos de `data/test_sets/`, que reproducen problemas de datos reales: fechas
 dd/mm/aaaa, nulos, duplicados, precios como texto, Excel con unidades en las columnas).
 
-**Fallo conocido:** `data/test_sets/ventas_excel_colombia.csv` (exportado desde Excel en
-Colombia: separador `;`, coma decimal, punto de miles y codificación Windows cp1252) hoy no
-se puede cargar (`UnicodeDecodeError`). Sus casos `t-vco-*` fallarán hasta que la carga de
-archivos detecte codificación, separador y decimal.
+`data/test_sets/ventas_excel_colombia.csv` (exportado desde Excel en Colombia: separador
+`;`, coma decimal, punto de miles y codificación Windows cp1252) no cargaba hasta la
+Entrega B, que detecta codificación, separador y decimal.
+
+Las evaluaciones se ejecutan con `evals/run_evals.py` (subconjuntos, repeticiones, `--resume`
+tras un corte por cupo y `--compare`). Para medir una entrega antes y después en el mismo
+día: `scripts/measure_commits.py`.
 
 ## Hoja de ruta
 
@@ -222,6 +225,26 @@ líneas") y pandas ya no oculta filas con "...". Caso de evaluación q08 con los
   1.212 tokens, y el costo por llamada se estabiliza en lugar de crecer con cada pregunta.
 - Si una llamada falla a mitad de una pregunta, esa pregunta se descarta y el historial
   queda como estaba (sin pasos huérfanos). Cada respuesta registra sus tokens totales.
+
+**Hallazgos del QA del 2026-10-08** ([informe](docs/qa/INFORME_QA_2026-10-08.md))
+
+- **A — evaluaciones:** ejecutor `evals/run_evals.py` y casos de los fallos del informe
+  (`evals/questions_qa.yaml`). Base: 4 de 14 casos del QA acertados (29 %).
+- **C — verificador honesto (H1, H8):** solo respalda cifras el código que terminó bien (ni
+  `inspect_data` ni ejecuciones fallidas); no se acepta una respuesta con cifras si la última
+  ejecución falló; sello "✓ Cifras calculadas con código"; las correcciones repiten la
+  pregunta actual.
+- **E — interpretación y alcance (H2, H7, H12):** identificadores no son clientes; decir el
+  alcance del dataset; no pronosticar; mencionar huecos y porcentajes > 100 % de forma
+  neutral; "no está permitido" en vez de "no tengo la capacidad". Medición antes/después con
+  3 repeticiones en curso.
+- **B — carga de archivos (H3, H4, H6, H9):** el archivo se carga en el sandbox y se guarda
+  normalizado en Parquet (`loading.py`): detecta codificación, separador, decimal y miles;
+  los códigos con ceros iniciales, las columnas mixtas y las de decimal ambiguo quedan como
+  texto y se explica por qué. Se normaliza el formato, nunca el contenido: "-" y "N/A" se
+  conservan y no se quitan duplicados. Excel: se listan las hojas y se elige una (cambiar de
+  hoja empieza una conversación nueva). Errores de carga en español. La vista previa de la
+  app sale del mismo Parquet que usa el agente.
 
 ## Licencia
 

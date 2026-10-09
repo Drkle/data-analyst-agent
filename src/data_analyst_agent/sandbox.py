@@ -46,7 +46,13 @@ pd.set_option("display.max_columns", 50)
 pd.set_option("display.width", 200)
 
 data_path, chart_path, max_points = sys.argv[1], sys.argv[2], int(sys.argv[3])
-df = pd.read_excel(data_path) if data_path.lower().endswith(".xlsx") else pd.read_csv(data_path)
+# El dataset ya viene normalizado en Parquet (ver loading.py); CSV/XLSX quedan por si acaso.
+if data_path.lower().endswith(".parquet"):
+    df = pd.read_parquet(data_path)
+elif data_path.lower().endswith(".xlsx"):
+    df = pd.read_excel(data_path)
+else:
+    df = pd.read_csv(data_path)
 namespace = {"__name__": "__main__", "pd": pd, "df": df}
 if chart_path:
     import plotly.express as px
@@ -137,12 +143,18 @@ def run_code(
 
     Con `chart_path`, el código debe crear `fig`; si es válida se guarda en ese archivo.
     """
-    workdir.mkdir(parents=True, exist_ok=True)
     chart_arg = str(chart_path.resolve()) if chart_path else ""
-    command = [
-        sys.executable, "-I", "-X", "utf8", "-c", _RUNNER,
-        str(data_path.resolve()), chart_arg, str(max_points),
-    ]  # fmt: skip
+    args = [str(data_path.resolve()), chart_arg, str(max_points)]
+    return run_program(_RUNNER, args, stdin=code, timeout=timeout, workdir=workdir)
+
+
+def run_program(
+    program: str, args: list[str], stdin: str, timeout: float, workdir: Path
+) -> ExecutionResult:
+    """Ejecuta el código fuente `program` en un proceso aislado (capa 0), con `args` en
+    sys.argv[1:] y `stdin` como entrada estándar."""
+    workdir.mkdir(parents=True, exist_ok=True)
+    command = [sys.executable, "-I", "-X", "utf8", "-c", program, *args]
     with _slots:
         proc = subprocess.Popen(
             command,
@@ -160,7 +172,7 @@ def run_code(
         stderr = _CappedReader(proc, proc.stderr, exceeded)
         try:
             assert proc.stdin is not None
-            proc.stdin.write(code.encode("utf-8"))
+            proc.stdin.write(stdin.encode("utf-8"))
             proc.stdin.close()
         except OSError:  # el hijo terminó antes de leer el código
             pass

@@ -27,7 +27,7 @@ from data_analyst_agent.agent import Agent
 from data_analyst_agent.config import Settings
 from data_analyst_agent.llm import LLMClient, LLMError
 from data_analyst_agent.sandbox import new_session_dir, remove_session_dir
-from data_analyst_agent.tools import DataTools, load_dataframe
+from data_analyst_agent.tools import DataTools, LoadError
 from data_analyst_agent.verifier import extract_mentions
 
 CHECK_FIELDS = {
@@ -201,20 +201,15 @@ def run_case(
     path = root / case.dataset
     if not path.exists():
         return record | {"status": "omitido", "error": f"no existe {case.dataset}"}
-    if case.sheet:
-        return record | {
-            "status": "omitido",
-            "error": "elegir hoja de Excel: llega en la Entrega B",
-        }
-    try:
-        load_dataframe(path)  # la app también lo carga antes de dejar preguntar
-    except Exception as exc:  # noqa: BLE001 - cualquier fallo de carga es un resultado del caso
-        return record | {"status": "error_carga", "error": f"{type(exc).__name__}: {exc}"}
-
     workdir = new_session_dir(workspace) if workspace else new_session_dir()
     start = time.monotonic()
     try:
-        tools = DataTools(path, timeout=settings.sandbox_timeout, workdir=workdir)
+        try:  # como en la app: si el archivo no carga, el usuario ni siquiera puede preguntar
+            tools = DataTools(
+                path, timeout=settings.sandbox_timeout, workdir=workdir, sheet=case.sheet
+            )
+        except LoadError as exc:
+            return record | {"status": "error_carga", "error": str(exc)}
         agent = Agent.from_settings(llm, tools, settings)
         context_tokens = 0
         try:
