@@ -202,9 +202,14 @@ Cada fase termina con un *commit* etiquetado y algo funcionando.
 | Cambios en las condiciones gratuitas de un proveedor | Arquitectura agnóstica: se migra a otro proveedor sin tocar el agente |
 | Modelos gratuitos menos precisos | Prompt de sistema claro, autocorrección y evaluaciones para medir y ajustar |
 | Exponer la API key | `.env` en `.gitignore`, secrets del proveedor en el despliegue |
+| **(v2)** DuckDB choca con el aislamiento de la v1: en Linux, el código del modelo corre con seccomp que niega abrir archivos tras la precarga, pero DuckDB abre los Parquet en cada consulta | A evaluar en la v2: un **proceso intermediario DuckDB** que reciba SQL por un canal ya abierto y solo pueda leer `data/` (`enable_external_access=false`, `allowed_directories`, `lock_configuration=true`, sin instalar ni cargar extensiones), mientras el código del modelo sigue sin poder abrir archivos |
 
 ## 11. Trabajo futuro (v2+)
 
+- **Modelo de datos para usuarios de Excel y Power BI:** varios archivos relacionados y
+  archivos grandes (millones de filas), probablemente con DuckDB sobre Parquet. La v1 ya
+  guarda cada tabla en `data/<tabla>.parquet` con un catálogo (`data/catalog.json`) para no
+  cerrar esa puerta. Ver el riesgo de DuckDB en la sección 10.
 - Conexión a bases de datos SQL.
 - Varios archivos y joins.
 - Exportar el análisis como notebook o informe PDF.
