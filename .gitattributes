@@ -1,3 +1,4 @@
 * text=auto eol=lf
-# Datasets de prueba: se guardan byte a byte (incluidos sus fines de línea CRLF de Windows).
+# Datasets de prueba: se guardan byte a byte, sin normalizar (p. ej. la codificación cp1252
+# de ventas_excel_colombia.csv es parte de lo que se prueba).
 data/test_sets/** -text
