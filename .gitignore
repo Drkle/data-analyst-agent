@@ -10,3 +10,5 @@ build/
 sandbox_workspace/
 evals/results/
 .DS_Store
+# Datasets reales (CC BY-SA 4.0): se regeneran con scripts/real_datasets.py
+data/real/*.csv

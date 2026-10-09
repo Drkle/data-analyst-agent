@@ -1,0 +1,189 @@
+# Casos de evaluación con datasets reales de datos.gov.co (licencia CC BY-SA 4.0).
+# Generado por real_datasets.py el 2026-10-09. Las respuestas se
+# calcularon con pandas, sin el agente. Si vuelves a descargar los datos, regenera
+# este archivo: TRM y hurtos se actualizan y sus cifras pueden cambiar.
+# Fuentes: Superintendencia Financiera de Colombia (32sa-8pi3); Policía Nacional de Colombia (DIJIN) (d4fr-sbn2); CDMB, Santander (kh7q-whyx); Ministerio de Educación Nacional (ji8i-4anb)
+
+# El 1 de enero es festivo: la TRM de ese día viene de una fila cuya vigencia empieza antes. Buscar solo VIGENCIADESDE == 2025-01-01 da 0 filas.
+- id: r-trm-01
+  dataset: data/real/trm.csv
+  question: ¿Cuál fue la TRM vigente el 1 de enero de 2025?
+  checks:
+  - type: numeric
+    value: 4409.15
+    tolerance: 0.01
+
+# Rige desde 2025-04-10.
+- id: r-trm-02
+  dataset: data/real/trm.csv
+  question: ¿Cuál fue la TRM más alta de 2025 y en qué mes?
+  checks:
+  - type: numeric
+    value: 4416.69
+    tolerance: 0.01
+  - type: contains
+    terms:
+    - abril
+
+# Rige desde 2025-12-25.
+- id: r-trm-03
+  dataset: data/real/trm.csv
+  question: ¿Cuál fue la TRM más baja de 2025?
+  checks:
+  - type: numeric
+    value: 3706.94
+    tolerance: 0.01
+
+# Pronóstico: los datos son históricos.
+- id: r-trm-04
+  dataset: data/real/trm.csv
+  question: ¿Cuál será la TRM el próximo mes?
+  checks:
+  - type: not_computable
+    refusal_any:
+    - no se puede
+    - no es posible
+    - no puedo
+    - no permite
+    - no hay datos
+    - no contiene
+    - no incluye
+    - no dispon
+    mentions_all: []
+    must_not_contain:
+    - la trm será de
+    - la trm estará en
+
+# Hay que sumar CANTIDAD; el número de filas de 2025 es 957. Ojo: el dataset no cubre todos los hurtos del país, solo las modalidades que reporta.
+- id: r-hur-01
+  dataset: data/real/hurtos_policia.csv
+  question: ¿Cuántos hurtos se registraron en total en 2025?
+  checks:
+  - type: numeric
+    value: 957.0
+    tolerance: 0
+
+# Tipo: HURTO ABIGEATO.
+- id: r-hur-02
+  dataset: data/real/hurtos_policia.csv
+  question: ¿Qué tipo de hurto tuvo más casos en 2025 y cuántos?
+  checks:
+  - type: contains
+    terms:
+    - abigeato
+  - type: numeric
+    value: 813.0
+    tolerance: 0
+
+# Departamento: CESAR.
+- id: r-hur-03
+  dataset: data/real/hurtos_policia.csv
+  question: ¿Qué departamento registró más hurtos en 2025?
+  checks:
+  - type: contains
+    terms:
+    - cesar
+  - type: numeric
+    value: 176.0
+    tolerance: 0
+
+# El dataset no tiene el valor de lo robado.
+- id: r-hur-04
+  dataset: data/real/hurtos_policia.csv
+  question: ¿Cuál fue el valor promedio de los bienes hurtados en 2025?
+  checks:
+  - type: not_computable
+    refusal_any:
+    - no se puede
+    - no es posible
+    - no puedo
+    - no permite
+    - no hay datos
+    - no contiene
+    - no incluye
+    - no dispon
+    mentions_all:
+    - valor
+    must_not_contain:
+    - valor promedio fue
+    - valor promedio de los bienes hurtados es
+
+# Hay 1530 valores -999 (o similares) que significan 'sin dato'. Promediarlos da -167.05.
+- id: r-air-01
+  dataset: data/real/aire_piedecuesta.csv
+  question: ¿Cuál fue la concentración promedio de PM2.5 en 2025?
+  checks:
+  - type: numeric
+    value: 9.6
+    tolerance: 0.01
+
+- id: r-air-02
+  dataset: data/real/aire_piedecuesta.csv
+  question: ¿Qué mes de 2025 tuvo el PM2.5 promedio más alto?
+  checks:
+  - type: contains
+    terms:
+    - marzo
+  - type: numeric
+    value: 15.46
+    tolerance: 0.01
+
+# Registrada el 2025-02-01 15:00:00.
+- id: r-air-03
+  dataset: data/real/aire_piedecuesta.csv
+  question: ¿Cuál fue la temperatura más alta registrada en 2025?
+  checks:
+  - type: numeric
+    value: 32.41
+    tolerance: 0.01
+
+# Departamento: La Guajira.
+- id: r-edu-01
+  dataset: data/real/educacion_departamentos.csv
+  question: ¿Qué departamento tuvo la mayor cobertura neta en 2024 y cuál fue?
+  checks:
+  - type: contains
+    terms:
+    - guajira
+  - type: numeric
+    value: 100.12
+    tolerance: 0.01
+
+# El nombre puede venir como 'Bogotá, D.C.' o similar: hay que buscarlo con flexibilidad.
+- id: r-edu-02
+  dataset: data/real/educacion_departamentos.csv
+  question: ¿Cuál fue la tasa de deserción de Bogotá en 2024?
+  checks:
+  - type: numeric
+    value: 2.49
+    tolerance: 0.01
+
+# Si hay filas de total nacional, no deben contarse como departamento.
+- id: r-edu-03
+  dataset: data/real/educacion_departamentos.csv
+  question: ¿Cuántos departamentos tuvieron una cobertura neta mayor al 90 % en 2024?
+  checks:
+  - type: numeric
+    value: 13.0
+    tolerance: 0
+
+# El dataset no tiene resultados de pruebas.
+- id: r-edu-04
+  dataset: data/real/educacion_departamentos.csv
+  question: ¿Cuál fue el puntaje promedio en las pruebas Saber 11 por departamento en 2024?
+  checks:
+  - type: not_computable
+    refusal_any:
+    - no se puede
+    - no es posible
+    - no puedo
+    - no permite
+    - no hay datos
+    - no contiene
+    - no incluye
+    - no dispon
+    mentions_all:
+    - saber
+    must_not_contain:
+    - puntaje promedio fue
+    - puntaje promedio es de

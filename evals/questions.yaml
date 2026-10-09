@@ -1,10 +1,15 @@
-# Preguntas de evaluación con respuesta esperada. El script que las evalúa llega en la Fase 4.
+# Preguntas de evaluación con respuesta esperada. Se ejecutan con evals/run_evals.py.
 #
-# Cada caso tiene una lista de `checks`; el caso acierta si pasan todos:
+# Campos de cada caso: id, dataset, question, checks y, opcionales, sheet (hoja de un Excel)
+# y qa (prueba del informe de QA de la que sale el caso).
+#
+# El caso acierta si pasan todos sus `checks`. Los términos se comparan sin distinguir
+# mayúsculas ni tildes, y al inicio de palabra ("cost" acepta "costos"):
 #   numeric:        la respuesta contiene `value` (± `tolerance`), aceptando formatos como
-#                   275 858,67 · 275.858,67 · 275858.67
-#   contains:       aparecen todos los `terms` (sin distinguir mayúsculas ni tildes)
-#   excludes:       no aparece ninguno de los `terms` (sin distinguir mayúsculas ni tildes)
+#                   275 858,67 · 275.858,67 · 275858.67 · 275,9 mil
+#   contains:       aparecen todos los `terms`
+#   contains_any:   aparece al menos uno de los `terms`
+#   excludes:       no aparece ninguno de los `terms`
 #   not_computable: la respuesta dice que no se puede calcular (al menos una de `refusal_any`),
 #                   menciona todo lo de `mentions_all` y no contiene nada de `must_not_contain`
 

@@ -37,10 +37,13 @@ class LLMError(Exception):
     El mensaje está pensado para el usuario; `detail` guarda el error técnico del proveedor.
     """
 
-    def __init__(self, message: str, detail: str = "", tool_format_errors: int = 0) -> None:
+    def __init__(
+        self, message: str, detail: str = "", tool_format_errors: int = 0, total_tokens: int = 0
+    ) -> None:
         super().__init__(message)
         self.detail = detail
         self.tool_format_errors = tool_format_errors
+        self.total_tokens = total_tokens  # tokens gastados en la pregunta antes del fallo
 
 
 @dataclass

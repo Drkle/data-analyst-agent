@@ -115,7 +115,9 @@ class Agent:
             try:
                 response = self.llm.chat(self._context(current), self.tools.definitions)
             except LLMError as exc:
-                exc.tool_format_errors += format_errors  # total de la pregunta, no de la llamada
+                # Totales de la pregunta, no solo de la llamada que falló.
+                exc.tool_format_errors += format_errors
+                exc.total_tokens += tokens
                 raise
             format_errors += response.tool_format_errors
             tokens += response.total_tokens or 0

@@ -1,37 +1,35 @@
-"""Valida el formato de los casos de evaluación (el script de evaluación llega en la Fase 4)."""
+"""Valida los archivos de casos de evaluación (formato, ids únicos y datasets)."""
 
 from pathlib import Path
-from typing import Any
 
 import pytest
-import yaml
+
+from data_analyst_agent.evaluation import Case, load_cases
 
 ROOT = Path(__file__).parents[1]
-CASE_FILES = [ROOT / "evals" / "questions.yaml", ROOT / "evals" / "questions_test_sets.yaml"]
-REQUIRED_FIELDS = {
-    "numeric": {"value", "tolerance"},
-    "contains": {"terms"},
-    "excludes": {"terms"},
-    "not_computable": {"refusal_any", "mentions_all", "must_not_contain"},
-}
+CASE_FILES = sorted((ROOT / "evals").glob("questions*.yaml"))
+# Datasets que no se suben al repositorio (ver data/real/README.md).
+DOWNLOADED = "data/real/"
 
 
-def _cases() -> list[dict[str, Any]]:
-    return [
-        case for path in CASE_FILES for case in yaml.safe_load(path.read_text(encoding="utf-8"))
-    ]
+def test_all_case_files_are_found() -> None:
+    names = {path.name for path in CASE_FILES}
+    assert {
+        "questions.yaml",
+        "questions_test_sets.yaml",
+        "questions_real.yaml",
+        "questions_qa.yaml",
+    } <= names
 
 
-def test_case_ids_are_unique_across_files() -> None:
-    ids = [case["id"] for case in _cases()]
-    assert len(ids) == len(set(ids))
+def test_cases_load_with_unique_ids() -> None:
+    assert len(load_cases(CASE_FILES)) > 40  # load_cases falla si hay ids repetidos
 
 
-@pytest.mark.parametrize("case", _cases(), ids=lambda case: case["id"])
-def test_case_is_well_formed(case: dict[str, Any]) -> None:
-    assert (ROOT / case["dataset"]).exists()
-    assert case["question"].strip()
-    assert case["checks"]
-    for check in case["checks"]:
-        assert check["type"] in REQUIRED_FIELDS
-        assert REQUIRED_FIELDS[check["type"]] <= check.keys()
+@pytest.mark.parametrize("case", load_cases(CASE_FILES), ids=lambda case: case.id)
+def test_case_is_well_formed(case: Case) -> None:
+    assert case.question.strip()
+    assert case.checks
+    if not (ROOT / case.dataset).exists():
+        assert case.dataset.startswith(DOWNLOADED), f"falta {case.dataset}"
+        pytest.skip(f"{case.dataset} no descargado")

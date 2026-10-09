@@ -51,6 +51,7 @@
 # que load_dataframe detecte codificación, separador y decimal.
 
 - id: t-vco-01
+  qa: S4
   dataset: data/test_sets/ventas_excel_colombia.csv
   question: "¿Qué ciudad tuvo el mayor valor total de ventas y cuánto fue?"
   checks:
@@ -58,12 +59,14 @@
     - {type: numeric, value: 90950117.89, tolerance: 0.01}
 
 - id: t-vco-02
+  qa: S4
   dataset: data/test_sets/ventas_excel_colombia.csv
   question: "¿Cuál fue el valor total vendido de Café especial?"
   checks:
     - {type: numeric, value: 106303591.94, tolerance: 0.01}
 
 - id: t-vco-03
+  qa: S4
   dataset: data/test_sets/ventas_excel_colombia.csv
   question: "¿Cuántas unidades se vendieron en diciembre?"
   # Fechas dd/mm/aaaa: leerlas como mm/dd cambiaría el resultado.
@@ -94,6 +97,7 @@
     - {type: numeric, value: 18, tolerance: 0}
 
 - id: t-cli-04
+  qa: S7
   dataset: data/test_sets/clima.xlsx
   question: "¿Qué temperatura máxima va a hacer mañana en Cali?"
   # Pronóstico: los datos son históricos, no se puede predecir con ellos.
@@ -128,6 +132,7 @@
     - {type: numeric, value: 28, tolerance: 0}
 
 - id: t-enc-04
+  qa: S10
   dataset: data/test_sets/encuesta.csv
   question: "¿Cuántos clientes distintos respondieron la encuesta?"
   # respuesta_id identifica respuestas, no clientes.
@@ -146,6 +151,7 @@
     - {type: numeric, value: 6, tolerance: 0}
 
 - id: t-inv-02
+  qa: S12
   dataset: data/test_sets/inventario_sucio.csv
   question: "¿Cuántos productos distintos hay en el inventario?"
   # 86 filas, pero solo 80 productos: contar filas es el error típico.
@@ -153,6 +159,7 @@
     - {type: numeric, value: 80, tolerance: 0}
 
 - id: t-inv-03
+  qa: S11
   dataset: data/test_sets/inventario_sucio.csv
   question: "¿Cuántos productos no tienen dato de stock?"
   # 5 tienen "N/A" (pandas los lee como nulos) y 4 tienen "-" (quedan como texto).
