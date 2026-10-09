@@ -73,7 +73,7 @@ def test_home_and_temp_point_to_session_dir(tools: DataTools) -> None:
 
 
 def test_child_only_gets_a_copy_of_the_dataset(tools: DataTools, tmp_path: Path) -> None:
-    assert tools.data_path.parent == tools.workdir
+    assert tools.data_path.parent == tools.workdir / "data"
     child_path = tools.run_python("import sys\nprint(sys.argv[1])")
     assert _same_path(child_path, tools.data_path)
     assert not _same_path(child_path, tmp_path / "ventas.csv")

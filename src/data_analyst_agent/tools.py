@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import io
 import json
 import shutil
@@ -33,6 +34,15 @@ MAX_OUTPUT_CHARS = 4000
 MAX_CHART_POINTS = 5000
 MAX_FILE_BYTES = 50 * 1024 * 1024
 LOAD_TIMEOUT = 60.0
+
+DATA_RESTORED_BEFORE = (
+    "[Aviso: el archivo de datos había cambiado desde la carga; se restauró el original "
+    "antes de esta ejecución.]"
+)
+DATA_RESTORED_AFTER = (
+    "[Aviso: este código modificó los datos guardados de la sesión; se restauró el original. "
+    "Trabaja sobre df en memoria y no escribas en la carpeta data/.]"
+)
 
 __all__ = ["DataTools", "LoadError", "ToolResult"]
 
@@ -183,9 +193,20 @@ class DataTools:
         self.definitions: list[ToolDefinition] = [INSPECT_DATA, RUN_PYTHON, CREATE_CHART]
         # La app nunca lee el archivo subido: el proceso aislado lo carga y lo normaliza.
         source = _copy_into_workdir(data_path, self.workdir)
-        self.load_info = _prepare_in_sandbox(source, self.workdir, sheet)
+        self.load_info = _prepare_in_sandbox(source, self.workdir, sheet, self.display_name)
         self.sheet: str | None = self.load_info["sheet"]
+        self.table: str = self.load_info["table"]
         self.data_path = self.workdir / self.load_info["parquet"]
+        # Hasta la capa 2, el código del modelo puede escribir en su carpeta: se guarda una
+        # copia en memoria (fuera de su alcance) para detectar y deshacer cambios a los datos.
+        self._originals = {
+            rel: (self.workdir / rel).read_bytes()
+            for rel in (self.load_info["parquet"], self.load_info["catalog"])
+        }
+        self._hashes = {
+            rel: hashlib.sha256(data).hexdigest() for rel, data in self._originals.items()
+        }
+        self.restorations = 0  # veces que hubo que restaurar los datos
 
     def preview(self) -> pd.DataFrame:
         """Primeras filas tal como las ve el agente (las escribió el cargador, en el sandbox)."""
@@ -212,12 +233,47 @@ class DataTools:
         return _error(f"Error: herramienta desconocida {name!r}. Disponibles: {names}.")
 
     def inspect_data(self) -> str:
-        result = run_code(_INSPECT_CODE, self.data_path, self.timeout, self.workdir)
+        result, notice = self._guarded_run(_INSPECT_CODE)
         if failure := self._stopped_message(result):
-            return failure
+            return _with_notice(failure, notice)
         if not result.ok:
-            return f"Error al inspeccionar los datos:\n{result.stderr.strip()}"
-        return truncate("\n".join([*self._load_summary(), "", result.stdout.strip()]))
+            return _with_notice(
+                f"Error al inspeccionar los datos:\n{result.stderr.strip()}", notice
+            )
+        text = truncate("\n".join([*self._load_summary(), "", result.stdout.strip()]))
+        return _with_notice(text, notice)
+
+    def _guarded_run(self, code: str, **kwargs: Any) -> tuple[ExecutionResult, str]:
+        """Ejecuta en el sandbox comprobando antes y después que los datos no cambiaron."""
+        notices = []
+        if self._restore_data():
+            notices.append(DATA_RESTORED_BEFORE)
+        result = run_code(code, self.data_path, self.timeout, self.workdir, **kwargs)
+        if self._restore_data():
+            notices.append(DATA_RESTORED_AFTER)
+        return result, "\n".join(notices)
+
+    def _restore_data(self) -> bool:
+        """Si el Parquet o el catálogo cambiaron desde la carga, restaura los originales."""
+        changed = [
+            rel for rel, digest in self._hashes.items() if _sha256(self.workdir / rel) != digest
+        ]
+        if not changed:
+            return False
+        data_dir = self.workdir / loading.DATA_DIR
+        # Nunca se escribe a través de un enlace: podría apuntar a un archivo fuera de la sesión.
+        if data_dir.is_symlink() or (data_dir.exists() and not data_dir.is_dir()):
+            data_dir.unlink()
+        data_dir.mkdir(exist_ok=True)
+        for rel in changed:
+            path = self.workdir / rel
+            if path.is_symlink() or path.is_file():
+                path.unlink()
+            elif path.is_dir():
+                shutil.rmtree(path)
+            path.write_bytes(self._originals[rel])
+        self.restorations += 1
+        return True
 
     def _load_summary(self) -> list[str]:
         """Cómo se leyó el archivo: formato, hojas y columnas que quedaron como texto."""
@@ -248,7 +304,10 @@ class DataTools:
         return self._run_python(code).text
 
     def _run_python(self, code: str) -> ToolResult:
-        result = run_code(code, self.data_path, self.timeout, self.workdir)
+        result, notice = self._guarded_run(code)
+        return _add_notice(self._code_result(result), notice)
+
+    def _code_result(self, result: ExecutionResult) -> ToolResult:
         if failure := self._stopped_message(result):
             return _error(failure)
         if not result.ok:
@@ -261,14 +320,12 @@ class DataTools:
     def create_chart(self, code: str) -> ToolResult:
         chart_path = self.workdir / "charts" / f"{uuid.uuid4().hex}.json"
         chart_path.parent.mkdir(parents=True, exist_ok=True)
-        result = run_code(
-            code,
-            self.data_path,
-            self.timeout,
-            self.workdir,
-            chart_path=chart_path,
-            max_points=self.max_chart_points,
+        result, notice = self._guarded_run(
+            code, chart_path=chart_path, max_points=self.max_chart_points
         )
+        return _add_notice(self._chart_result(result, chart_path), notice)
+
+    def _chart_result(self, result: ExecutionResult, chart_path: Path) -> ToolResult:
         if failure := self._stopped_message(result):
             return _error(failure)
         if result.chart_invalid:
@@ -303,10 +360,32 @@ def _error(text: str) -> ToolResult:
     return ToolResult(text, status="error")
 
 
-def _prepare_in_sandbox(source: Path, workdir: Path, sheet: str | None) -> dict[str, Any]:
+def _with_notice(text: str, notice: str) -> str:
+    return f"{text}\n{notice}" if notice else text
+
+
+def _add_notice(result: ToolResult, notice: str) -> ToolResult:
+    result.text = _with_notice(result.text, notice)
+    return result
+
+
+def _sha256(path: Path) -> str | None:
+    """Hash del archivo, o None si no existe o no es un archivo normal."""
+    if path.is_symlink() or not path.is_file():
+        return None
+    digest = hashlib.sha256()
+    with path.open("rb") as file:
+        while chunk := file.read(1 << 20):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _prepare_in_sandbox(
+    source: Path, workdir: Path, sheet: str | None, display_name: str
+) -> dict[str, Any]:
     """Carga y normaliza el archivo en un proceso aislado (ver loading.py)."""
     program = Path(loading.__file__).read_text(encoding="utf-8")
-    args = [str(source.resolve()), str(workdir.resolve()), sheet or ""]
+    args = [str(source.resolve()), str(workdir.resolve()), sheet or "", display_name]
     result = run_program(program, args, stdin="", timeout=LOAD_TIMEOUT, workdir=workdir)
     if result.timed_out:
         raise LoadError(f"La carga del archivo superó {LOAD_TIMEOUT:g} s y se detuvo.")

@@ -16,8 +16,8 @@ def _tools(path: Path, tmp_path: Path, **kwargs: object) -> DataTools:
 
 def test_colombian_csv_is_loaded_in_the_sandbox(tmp_path: Path) -> None:
     tools = _tools(COLOMBIA, tmp_path)
-    assert tools.data_path.name == "datos.parquet"
-    assert tools.data_path.parent == tools.workdir
+    assert tools.table == "ventas_excel_colombia"
+    assert tools.data_path == tools.workdir / "data" / "ventas_excel_colombia.parquet"
     total = tools.run_python(
         "print(round(df.loc[df['Ciudad'] == 'Bogotá', 'Valor total'].sum(), 2))"
     )

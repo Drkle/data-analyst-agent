@@ -10,7 +10,10 @@ iniciales, hoja), nunca el CONTENIDO. Por eso:
 
 Este módulo se ejecuta dentro del sandbox (sandbox.run_program le pasa su código fuente),
 por eso solo depende de la librería estándar y de pandas: no importa nada del paquete.
-Uso en el proceso hijo: python -c <este archivo> ORIGEN CARPETA_SALIDA [HOJA]
+Salida: CARPETA/data/<tabla>.parquet y CARPETA/data/catalog.json (nombre de tabla, archivo
+de origen, hoja, filas y columnas). La v1 usa una sola tabla; el formato admite varias.
+
+Uso en el proceso hijo: python -c <este archivo> ORIGEN CARPETA_SALIDA [HOJA] [NOMBRE_ORIGINAL]
 """
 
 from __future__ import annotations
@@ -21,13 +24,18 @@ import io
 import json
 import re
 import sys
+import unicodedata
 import zipfile
 from pathlib import Path
 from typing import Any
 
 import pandas as pd
 
-PARQUET_NAME = "datos.parquet"
+# Carpeta de datos de la sesión: un Parquet por tabla y un catálogo. La v1 usa una sola
+# tabla, pero el formato ya admite varias (un modelo de datos con archivos relacionados).
+DATA_DIR = "data"
+CATALOG_NAME = "catalog.json"
+CATALOG_VERSION = 1
 PREVIEW_ROWS = 10
 ENCODINGS = ("utf-8-sig", "cp1252", "latin-1")  # utf-8-sig también lee UTF-8 sin BOM
 SEPARATORS = ",;\t|"
@@ -63,14 +71,55 @@ def load_table(path: Path, sheet: str | None = None) -> tuple[pd.DataFrame, dict
     return df, info
 
 
-def prepare(source: Path, output_dir: Path, sheet: str | None = None) -> dict[str, Any]:
-    """Carga `source`, guarda el Parquet en `output_dir` y devuelve la información."""
+def prepare(
+    source: Path, output_dir: Path, sheet: str | None = None, display_name: str | None = None
+) -> dict[str, Any]:
+    """Carga `source` y la guarda como tabla en `output_dir/data/`, con su catálogo.
+
+    Devuelve la información de la carga (rutas relativas a `output_dir`).
+    """
     df, info = load_table(source, sheet)
-    df.to_parquet(output_dir / PARQUET_NAME, index=False)
+    origin = display_name or source.name
+    name = table_name(origin, info["sheet"], info["sheets"])
+    data_dir = output_dir / DATA_DIR
+    data_dir.mkdir(parents=True, exist_ok=True)
+    parquet = f"{DATA_DIR}/{name}.parquet"
+    df.to_parquet(output_dir / parquet, index=False)
+    catalog = {
+        "version": CATALOG_VERSION,
+        "tables": [
+            {
+                "name": name,
+                "file": parquet,
+                "source": origin,
+                "sheet": info["sheet"],
+                "rows": info["rows"],
+                "columns": info["columns"],
+            }
+        ],
+    }
+    catalog_path = f"{DATA_DIR}/{CATALOG_NAME}"
+    (output_dir / catalog_path).write_text(
+        json.dumps(catalog, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
     preview = df.head(PREVIEW_ROWS)
     info["preview"] = preview.to_json(orient="split", date_format="iso", force_ascii=False)
-    info["parquet"] = PARQUET_NAME
+    info.update(table=name, parquet=parquet, catalog=catalog_path)
     return info
+
+
+def table_name(origin: str, sheet: str | None, sheets: list[str]) -> str:
+    """Nombre de tabla válido como identificador: 'Ventas 2025.xlsx' + hoja 'Gastos' ->
+    'ventas_2025_gastos'. La hoja solo se añade si el Excel tiene varias."""
+    name = _slug(Path(origin).stem) or "tabla"
+    if sheet and len(sheets) > 1:
+        name = f"{name}_{_slug(sheet) or 'hoja'}"
+    return f"t_{name}" if name[0].isdigit() else name
+
+
+def _slug(text: str) -> str:
+    ascii_text = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode()
+    return re.sub(r"[^a-z0-9]+", "_", ascii_text.lower()).strip("_")
 
 
 # --- CSV ----------------------------------------------------------------------------------------
@@ -237,8 +286,10 @@ def _read_excel(path: Path, sheet: str | None) -> tuple[pd.DataFrame, dict[str, 
 def _main(argv: list[str]) -> None:
     source, output_dir = Path(argv[0]), Path(argv[1])
     sheet = argv[2] if len(argv) > 2 and argv[2] else None
+    display_name = argv[3] if len(argv) > 3 and argv[3] else None
     try:
-        result: dict[str, Any] = {"ok": True, "info": prepare(source, output_dir, sheet)}
+        info = prepare(source, output_dir, sheet, display_name)
+        result: dict[str, Any] = {"ok": True, "info": info}
     except LoadError as exc:
         result = {"ok": False, "error": str(exc)}
     except Exception as exc:  # noqa: BLE001 - cualquier otro fallo se informa en español
