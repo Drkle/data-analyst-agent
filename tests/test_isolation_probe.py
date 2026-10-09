@@ -37,17 +37,12 @@ def test_non_linux_is_development_only(report: dict) -> None:
 @pytest.mark.skipif(not IS_LINUX, reason="pruebas del kernel de Linux")
 def test_linux_checks_run_without_crashing(report: dict) -> None:
     linux = report["linux"]
-    for key in (
-        "landlock_archivos",
-        "landlock_red",
-        "seccomp_filtro",
-        "user_namespaces",
-        "bwrap_sandbox",
-    ):
+    for key in ("landlock_archivos", "landlock_red", "seccomp_filtro", "user_namespaces"):
         assert isinstance(linux[key], str) and linux[key]
     assert "numpy" in linux["rlimit_as_1gb"]
-    # Un informe por prueba (análisis, gráficas...) o un texto si no se pudo instalar.
-    assert isinstance(linux["seccomp_sin_open"], (dict, str)) and linux["seccomp_sin_open"]
+    # Un informe por variante o prueba, o un texto ("no instalado", un error...).
+    for key in ("bwrap_sandbox", "seccomp_sin_open"):
+        assert isinstance(linux[key], (dict, str)) and linux[key]
 
 
 def test_markdown_shows_level(report: dict) -> None:

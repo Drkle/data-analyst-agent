@@ -171,8 +171,8 @@ r["bloquea_etc_passwd"] = blocked(lambda: open("/etc/passwd").read())
 r["bloquea_red"] = blocked(lambda: socket.create_connection(("1.1.1.1", 443), timeout=3))
 print(json.dumps(r))
 '''.replace("OUTSIDE", repr(outside))
-args = [
-    bwrap, "--unshare-all", "--die-with-parent", "--new-session",
+mounts = [
+    "--die-with-parent", "--new-session",
     "--ro-bind", "/usr", "/usr",
     "--symlink", "usr/lib", "/lib", "--symlink", "usr/lib64", "/lib64",
     "--symlink", "usr/bin", "/bin",
@@ -183,16 +183,27 @@ args = [
 ]
 for prefix in sorted({os.path.realpath(p) for p in (sys.prefix, sys.base_prefix)}):
     if not prefix.startswith("/usr"):
-        args += ["--ro-bind", prefix, prefix]
-proc = subprocess.run(
-    [*args, sys.executable, "-I", "-c", inner], capture_output=True, text=True, timeout=60
-)
-if proc.returncode != 0:
-    error = (proc.stderr.strip().splitlines() or ["sin mensaje"])[-1]
-    print(f"falla al crear el sandbox: {error[:200]}"); sys.exit()
-results = json.loads(proc.stdout.strip().splitlines()[-1])
-failed = [name for name, ok in results.items() if not ok]
-print("funciona" if not failed else f"incompleto: falla {', '.join(failed)}")
+        mounts += ["--ro-bind", prefix, prefix]
+
+def attempt(namespaces):
+    proc = subprocess.run(
+        [bwrap, *namespaces, *mounts, sys.executable, "-I", "-c", inner],
+        capture_output=True, text=True, timeout=60,
+    )
+    if proc.returncode != 0:
+        error = (proc.stderr.strip().splitlines() or ["sin mensaje"])[-1]
+        return f"falla al crear el sandbox: {error[:200]}"
+    results = json.loads(proc.stdout.strip().splitlines()[-1])
+    failed = [name for name, ok in results.items() if not ok]
+    return "funciona" if not failed else f"incompleto: falla {', '.join(failed)}"
+
+full = attempt(["--unshare-all"])
+# Si no se pudo aislar la red (p. ej. el loopback), se prueba sin namespace de red: la red
+# se puede cortar con seccomp, y lo importante es saber si el aislamiento de archivos sirve.
+no_net = ["--unshare-user", "--unshare-ipc", "--unshare-pid", "--unshare-uts",
+          "--unshare-cgroup-try"]
+partial = attempt(no_net) if full != "funciona" else "no hizo falta"
+print(json.dumps({"completo": full, "sin_namespace_de_red": partial}, ensure_ascii=False))
 """
 
 # seccomp sin apertura de archivos: precarga librerías y datos, deja abierto el descriptor de
@@ -212,9 +223,26 @@ base = tempfile.mkdtemp()
 path = os.path.join(base, "t.parquet")
 pd.DataFrame({"cat": list("abcab"), "v": [1, 2, 3, 4, 5]}).to_parquet(path)
 df = pd.read_parquet(path)
-# Precalentamiento: un análisis y una gráfica de barras completos antes del filtro.
-df.groupby("cat")["v"].sum().to_string()
-px.bar(df.groupby("cat", as_index=False)["v"].sum(), x="cat", y="v").to_json()
+# Precarga amplia: operaciones y tipos de gráfica habituales, para que Python importe antes
+# del filtro los módulos que cargaría sobre la marcha.
+df["fecha"] = pd.to_datetime(pd.Series(["2025-01-01"] * 5)) + pd.to_timedelta(range(5), "D")
+for warm in (
+    lambda: df.describe(include="all").to_string(),
+    lambda: df.groupby("cat")["v"].agg(["sum", "mean", "count", "median", "std"]).to_string(),
+    lambda: df.pivot_table(index="cat", values="v", aggfunc="sum").to_string(),
+    lambda: df.set_index("fecha")["v"].resample("D").sum().rolling(2).mean().to_string(),
+    lambda: df.merge(df, on="cat").sort_values("v_x").value_counts().head().to_string(),
+    lambda: df[["v"]].corr().round(2).to_string(),
+    lambda: df["v"].quantile([0.25, 0.5]).to_string(),
+    lambda: px.bar(df, x="cat", y="v").to_json(),
+    lambda: px.line(df, x="fecha", y="v").to_json(),
+    lambda: px.scatter(df, x="v", y="v").to_json(),
+    lambda: px.pie(df, names="cat", values="v").to_json(),
+    lambda: px.histogram(df, x="v").to_json(),
+    lambda: px.box(df, y="v").to_json(),
+    lambda: px.area(df, x="fecha", y="v").to_json(),
+):
+    warm()
 out = open(os.path.join(base, "grafica.json"), "w")  # salida abierta antes del filtro
 
 class Filter(ctypes.Structure):
@@ -240,12 +268,14 @@ def attempt(action):
         action()
         return "ok"
     except Exception as exc:
-        return f"falla ({type(exc).__name__}: {str(exc)[:80]})"
+        # El final del mensaje dice qué archivo (módulo) intentó abrir.
+        return f"falla ({type(exc).__name__}: ...{str(exc)[-100:]})"
 
 r = {
     "analisis": attempt(lambda: df.groupby("cat")["v"].agg(["sum", "mean"]).describe().to_string()),
-    "grafica_de_barras": attempt(lambda: px.bar(df, x="cat", y="v").to_json()),
-    "grafica_de_otro_tipo": attempt(lambda: px.pie(df, names="cat", values="v").to_json()),
+    "analisis_no_precargado": attempt(lambda: df["v"].cumsum().pct_change().round(3).to_string()),
+    "grafica_precargada": attempt(lambda: px.pie(df, names="cat", values="v").to_json()),
+    "grafica_no_precargada": attempt(lambda: px.violin(df, y="v").to_json()),
     "escribe_en_salida_abierta": attempt(lambda: (out.write("{}"), out.flush())),
 }
 blocked = attempt(lambda: open("/etc/hostname").read())
@@ -265,8 +295,8 @@ def run_probe() -> dict[str, Any]:
             "seccomp_filtro": _in_child(_SECCOMP_TEST),
             "libseccomp": _libseccomp(),
             "user_namespaces": _in_child(_UNSHARE_TEST),
-            "bwrap_sandbox": _in_child(_BWRAP_TEST),
-            "seccomp_sin_open": _seccomp_no_open(),
+            "bwrap_sandbox": _json_child(_BWRAP_TEST),
+            "seccomp_sin_open": _json_child(_SECCOMP_NO_OPEN_TEST),
             "estado_proceso": _proc_status(),
             "limites": _rlimits(),
             "memoria_cgroup": _read("/sys/fs/cgroup/memory.max"),
@@ -309,10 +339,22 @@ def _level(report: dict[str, Any]) -> dict[str, Any]:
     if files and syscalls:
         network = " y red por Landlock" if linux["landlock_red"] == FUNCIONA else ""
         return {"nivel": f"fuerte: Landlock (archivos{network}) + seccomp", "suficiente": True}
-    if linux.get("bwrap_sandbox") == FUNCIONA and syscalls:
-        return {"nivel": "fuerte: bubblewrap (namespaces) + seccomp", "suficiente": True}
-    no_open = linux.get("seccomp_sin_open", {})
-    if syscalls and isinstance(no_open, dict) and all(v == "ok" for v in no_open.values()):
+    bwrap = linux.get("bwrap_sandbox")
+    if syscalls and isinstance(bwrap, dict):
+        if bwrap.get("completo") == FUNCIONA:
+            return {"nivel": "fuerte: bubblewrap (namespaces) + seccomp", "suficiente": True}
+        if bwrap.get("sin_namespace_de_red") == FUNCIONA:
+            return {
+                "nivel": "fuerte: bubblewrap (archivos) + seccomp (red y procesos)",
+                "suficiente": True,
+            }
+    no_open = linux.get("seccomp_sin_open")
+    preloaded = ("analisis", "grafica_precargada", "escribe_en_salida_abierta")
+    if (
+        syscalls
+        and isinstance(no_open, dict)
+        and all(no_open.get(key) == "ok" for key in (*preloaded, "bloquea_abrir_archivos"))
+    ):
         return {
             "nivel": "suficiente: seccomp con precarga (sin abrir archivos tras cargar)",
             "suficiente": True,
@@ -326,12 +368,14 @@ def _level(report: dict[str, Any]) -> dict[str, Any]:
     return {"nivel": f"{text}. La app cerraría; evaluar el plan B (Pyodide)", "suficiente": False}
 
 
-def _seccomp_no_open() -> dict[str, str] | str:
-    output = _in_child(_SECCOMP_NO_OPEN_TEST)
+def _json_child(code: str) -> dict[str, str] | str:
+    """Ejecuta una prueba que imprime un JSON; si imprime otra cosa (p. ej. 'no instalado'
+    o un error), devuelve ese texto."""
+    output = _in_child(code)
     try:
         return json.loads(output)
     except json.JSONDecodeError:
-        return output  # p. ej. "no se pudo instalar..." o un error
+        return output
 
 
 def _in_child(code: str) -> str:
