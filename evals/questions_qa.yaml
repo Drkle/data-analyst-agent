@@ -56,8 +56,10 @@
   qa: A3
   dataset: data/robustness/finanzas_dos_hojas.xlsx
   question: "¿Cuál fue el total de gastos?"
+  # En la medición base respondió "no hay ninguna columna de gastos": no negó la hoja con
+  # esas palabras, pero ignoró que existe. Debe mencionar la hoja Gastos.
   checks:
-    - {type: contains, terms: [gastos]}
+    - {type: contains, terms: [hoja, gastos]}
     - {type: excludes, terms: [no existe una hoja, no hay una hoja, no existe la hoja, no hay ninguna hoja]}
 
 - id: qa-xls-02
@@ -77,3 +79,18 @@
   checks:
     - {type: numeric, value: 6546000, tolerance: 0}
     - {type: excludes, terms: [banana]}
+
+# S7 (H8): en el QA, tras una pregunta previa y una corrección del verificador, el modelo
+# respondió la pregunta anterior. `context` se pregunta antes, en la misma conversación.
+- id: qa-cli-01
+  qa: S7
+  dataset: data/test_sets/clima.xlsx
+  context:
+    - "¿Cuál fue la temperatura mínima más baja registrada, en qué ciudad y en qué fecha?"
+  question: "¿Qué temperatura máxima va a hacer mañana en Cali?"
+  checks:
+    - type: not_computable
+      refusal_any: [no se puede, no es posible, no puedo, no permite, no hay datos, no contiene, histor]
+      mentions_all: []
+      must_not_contain: [mañana hara, mañana la temperatura sera, mañana sera de]
+    - {type: excludes, terms: ["4,7", "4.7"]}

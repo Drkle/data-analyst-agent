@@ -1,7 +1,8 @@
 # Preguntas de evaluación con respuesta esperada. Se ejecutan con evals/run_evals.py.
 #
-# Campos de cada caso: id, dataset, question, checks y, opcionales, sheet (hoja de un Excel)
-# y qa (prueba del informe de QA de la que sale el caso).
+# Campos de cada caso: id, dataset, question, checks y, opcionales, sheet (hoja de un Excel),
+# qa (prueba del informe de QA de la que sale el caso) y context (preguntas previas que se
+# hacen antes, en la misma conversación, sin evaluarlas).
 #
 # El caso acierta si pasan todos sus `checks`. Los términos se comparan sin distinguir
 # mayúsculas ni tildes, y al inicio de palabra ("cost" acepta "costos"):

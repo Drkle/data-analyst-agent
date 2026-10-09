@@ -230,3 +230,12 @@ def test_summary_ignores_call_errors_and_skips() -> None:
     assert summary.accuracy == pytest.approx(1 / 3)
     assert summary.avg_iterations == 3
     assert summary.tokens == 35
+
+
+def test_context_questions_run_first_in_the_same_conversation(root: Path) -> None:
+    llm = ScriptedLLM([LLMResponse(text="Antes.", total_tokens=30), *_answer_with_code()])
+    case = _case(context=["¿Pregunta previa?"])
+    record = run_case(case, SETTINGS, llm, root, workspace=root / "ws")
+    assert record["status"] == "acierto"
+    assert record["context_tokens"] == 30
+    assert record["total_tokens"] == 180

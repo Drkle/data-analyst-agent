@@ -51,6 +51,7 @@ class Case:
     checks: list[dict[str, Any]]
     sheet: str | None = None
     qa: str | None = None
+    context: list[str] = field(default_factory=list)  # preguntas previas, sin evaluar
     source: str = ""  # archivo YAML de origen
 
 
@@ -81,6 +82,7 @@ def load_cases(files: Iterable[Path]) -> list[Case]:
                     checks=raw["checks"],
                     sheet=raw.get("sheet"),
                     qa=raw.get("qa"),
+                    context=list(raw.get("context") or []),
                     source=path.name,
                 )
             )
@@ -214,14 +216,17 @@ def run_case(
     try:
         tools = DataTools(path, timeout=settings.sandbox_timeout, workdir=workdir)
         agent = Agent.from_settings(llm, tools, settings)
+        context_tokens = 0
         try:
+            for previous in case.context:  # misma conversación; no se evalúan
+                context_tokens += agent.run(previous).total_tokens
             result = agent.run(case.question)
         except LLMError as exc:
             return record | {
                 "status": "error_llamada",
                 "error": str(exc),
                 "detail": exc.detail,
-                "total_tokens": exc.total_tokens,
+                "total_tokens": context_tokens + exc.total_tokens,
                 "tool_format_errors": exc.tool_format_errors,
                 "seconds": round(time.monotonic() - start, 1),
             }
@@ -238,7 +243,8 @@ def run_case(
         "checks": [vars(c) for c in checks],
         "iterations": result.iterations,
         "hit_limit": result.hit_limit,
-        "total_tokens": result.total_tokens,
+        "total_tokens": context_tokens + result.total_tokens,
+        "context_tokens": context_tokens,
         "tool_format_errors": result.tool_format_errors,
         "verification": {
             "triggers": result.verification.triggers,
