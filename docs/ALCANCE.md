@@ -93,7 +93,7 @@ responder, el agente lo dice.
 | Respuestas | Texto en español con formato colombiano, gráficas Plotly, código de cada paso |
 | Honestidad | Negarse cuando falta el dato, advertir el alcance del dataset, señalar huecos y valores fuera de rango, no pronosticar |
 | Calidad de datos | `inspect_data` advierte columnas con espacios, valores no numéricos en columnas numéricas, centinelas (`-999`), duplicados y porcentajes mayores que 100 |
-| Seguridad | Sandbox con entorno limpio (capa 0), bloqueo de procesos y red (seccomp) y aislamiento de archivos (bubblewrap o equivalente) |
+| Seguridad | Sandbox con entorno limpio (capa 0), bloqueo de procesos y red (seccomp) y aislamiento de archivos con seccomp con precarga (sin abrir archivos tras cargar los datos) |
 | Interfaz | App de Streamlit y CLI |
 | Demo | Streamlit Community Cloud, con datasets de ejemplo precargados y cupo por visitante |
 
@@ -123,7 +123,7 @@ responder, el agente lo dice.
 | Restricción | Consecuencia en el diseño |
 |---|---|
 | Costo $0 (capa gratuita de Groq: ~8.000 tokens/minuto, ~200.000/día) | Historial acotado, salidas recortadas, demo con cupo; evaluaciones por subconjuntos |
-| Streamlit Cloud: sin Landlock, con seccomp, 3 GB de RAM | El aislamiento de archivos se resuelve con bubblewrap o con seccomp sin apertura de archivos |
+| Streamlit Cloud: sin Landlock, con seccomp, 3 GB de RAM; bubblewrap no funciona (el contenedor no permite cambiar la propagación de montajes) | El aislamiento de archivos se resuelve con seccomp con precarga: se cargan librerías y datos, y después se niega abrir archivos |
 | Privacidad | La demo advierte que no se suban datos sensibles |
 | Modelos no deterministas | Toda medición usa repeticiones; ninguna conclusión con una sola corrida |
 
