@@ -244,7 +244,13 @@ líneas") y pandas ya no oculta filas con "...". Caso de evaluación q08 con los
   texto y se explica por qué. Se normaliza el formato, nunca el contenido: "-" y "N/A" se
   conservan y no se quitan duplicados. Excel: se listan las hojas y se elige una (cambiar de
   hoja empieza una conversación nueva). Errores de carga en español. La vista previa de la
-  app sale del mismo Parquet que usa el agente.
+  app sale del mismo Parquet que usa el agente. Cada tabla va en `data/<tabla>.parquet` con un
+  catálogo (`data/catalog.json`), pensando en varios archivos relacionados en una v2. Los
+  datos se protegen con un hash: si una ejecución los cambia, se restauran y se avisa.
+- **D — alertas de calidad (H5):** `inspect_data` señala, sin corregir nada, nombres de
+  columna con espacios, columnas casi numéricas con valores como "-" o "N/A", números
+  guardados como texto, posibles centinelas (-999), filas duplicadas y porcentajes mayores que
+  100 (en tono neutral: "revisar si es esperado").
 
 ## Licencia
 

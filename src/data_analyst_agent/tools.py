@@ -18,7 +18,7 @@ from typing import Any, Literal
 
 import pandas as pd
 
-from data_analyst_agent import loading
+from data_analyst_agent import inspection, loading
 from data_analyst_agent.chart_format import format_figure
 from data_analyst_agent.llm import INVALID_ARGUMENTS_KEY, ToolDefinition
 from data_analyst_agent.loading import LoadError
@@ -120,22 +120,8 @@ class ToolResult:
     status: ToolStatus = "evidence"
 
 
-# Lo ejecuta inspect_data en el sandbox, sobre el Parquet ya normalizado (df).
-_INSPECT_CODE = """
-print(f"Filas: {len(df)}, columnas: {len(df.columns)}")
-print()
-print("Columnas:")
-for col, dtype, nulls in zip(df.columns, df.dtypes, df.isna().sum()):
-    print(f"- {col}: {dtype}, {nulls} nulos")
-print()
-print("Primeras 5 filas:")
-print(df.head().to_string())
-numeric = df.select_dtypes("number")
-if not numeric.empty:
-    print()
-    print("Estadísticas de columnas numéricas:")
-    print(numeric.describe().round(2).to_string())
-"""
+# inspect_data ejecuta este módulo en el sandbox, sobre el Parquet ya normalizado (df).
+_INSPECT_CODE = Path(inspection.__file__).read_text(encoding="utf-8")
 
 
 def truncate(text: str, limit: int = MAX_OUTPUT_CHARS) -> str:
